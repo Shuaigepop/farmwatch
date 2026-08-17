@@ -1,0 +1,103 @@
+﻿    elif isinstance(event, PostbackEvent):
+        source = event.source
+        group_id = None
+        target_id = source.user_id
+        if source.type == "group":
+            group_id = source.group_id
+            target_id = group_id
+            
+        farm_id = None
+        if group_id:
+            res = await db.execute(select(LineGroup).where(LineGroup.line_group_id == group_id))
+            group = res.scalar_one_or_none()
+            if group and group.farm_id:
+                farm_id = group.farm_id
+                
+        if farm_id:
+            import urllib.parse
+            data_dict = dict(urllib.parse.parse_qsl(event.postback.data))
+            action = data_dict.get('action')
+            
+            if action == 'done_init':
+                from models.models import FarmZone
+                res = await db.execute(select(FarmZone).where(FarmZone.farm_id == farm_id))
+                zones = res.scalars().all()
+                if not zones:
+                    line_service.send_reply(event.reply_token, "⚠️ 没有找到任何区域设定。请在系统后台新增。")
+                else:
+                    zone_list = [{'id': z.id, 'name': z.name} for z in zones]
+                    line_service.send_carousel_zones(event.reply_token, zone_list)
+                    
+            elif action == 'zone_selected':
+                zone_id = int(data_dict.get('zone_id'))
+                from models.models import Task, FarmZone
+                from sqlalchemy.orm import selectinload
+                query = select(Task).where(
+                    Task.farm_id == farm_id, 
+                    Task.zone_id == zone_id,
+                    Task.status != "completed"
+                ).order_by(Task.due_date.asc())
+                res = await db.execute(query)
+                tasks = res.scalars().all()
+                
+                res_zone = await db.execute(select(FarmZone).where(FarmZone.id == zone_id))
+                zone_name = res_zone.scalar_one().name
+                
+                if not tasks:
+                    line_service.send_reply(event.reply_token, f"✅ [{zone_name}] 没有待办任务 (No pending tasks)")
+                else:
+                    task_list = [{'id': t.id, 'title': t.title} for t in tasks]
+                    line_service.send_quick_reply_tasks(event.reply_token, task_list, zone_name)
+                    
+            elif action == 'task_selected':
+                task_id = int(data_dict.get('task_id'))
+                from models.models import Task
+                res = await db.execute(select(Task).where(Task.id == task_id))
+                t = res.scalar_one_or_none()
+                if t:
+                    t.status = "completed"
+                    t.completed_at = datetime.now(timezone.utc)
+                    await db.commit()
+                    line_service.send_reply(event.reply_token, f"✅ 已完成！(Done!) \n{t.title}")
+                    
+            elif action == 'supply_init':
+                from models.models import InventoryItem
+                res = await db.execute(select(InventoryItem).where(InventoryItem.farm_id == farm_id))
+                items = res.scalars().all()
+                if not items:
+                    line_service.send_reply(event.reply_token, "📦 仓库为空 (Inventory empty)")
+                else:
+                    item_list = [{'id': i.id, 'name': i.name, 'quantity': i.quantity, 'unit': i.unit} for i in items]
+                    line_service.send_carousel_inventory(event.reply_token, item_list)
+                    
+            elif action == 'supply_selected':
+                item_id = int(data_dict.get('item_id'))
+                from models.models import InventoryItem
+                res = await db.execute(select(InventoryItem).where(InventoryItem.id == item_id))
+                it = res.scalar_one_or_none()
+                if it:
+                    line_service.send_quick_reply_quantities(event.reply_token, it.name, item_id)
+                    
+            elif action == 'qty_selected':
+                item_id = int(data_dict.get('item_id'))
+                qty = int(data_dict.get('qty'))
+                from models.models import InventoryItem
+                res = await db.execute(select(InventoryItem).where(InventoryItem.id == item_id))
+                it = res.scalar_one_or_none()
+                if it:
+                    line_service.send_quick_reply_units(event.reply_token, it.name, item_id, qty, it.unit)
+                    
+            elif action == 'unit_selected':
+                item_id = int(data_dict.get('item_id'))
+                qty = float(data_dict.get('qty'))
+                unit = data_dict.get('unit')
+                from models.models import InventoryItem
+                res = await db.execute(select(InventoryItem).where(InventoryItem.id == item_id))
+                it = res.scalar_one_or_none()
+                if it:
+                    it.quantity = max(0, it.quantity - qty)
+                    await db.commit()
+                    line_service.send_reply(event.reply_token, f"✅ 已记录使用 (Recorded usage): \n{it.name} -{qty} {unit}")
+                    
+            elif action == 'problem_init':
+                line_service.send_camera_quick_reply(event.reply_token)

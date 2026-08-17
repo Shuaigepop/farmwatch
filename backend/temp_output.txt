@@ -1,0 +1,65 @@
+16: def send_text_message(self, group_id: str, text: str):
+17: # 發送文字訊息至群組 (Send text message to group)
+25: messages=[TextMessage(text=text)]
+29: def send_reply(self, reply_token: str, text: str):
+38: messages=[TextMessage(text=text)]
+88: "type": "text",
+89: "text": "FarmWatch 农场系统",
+95: "type": "text",
+96: "text": "👇 互动选单 (Menu)",
+120: "label": "Done",
+122: "displayText": "✅ 完成工作"
+126: "type": "text",
+127: "text": "✅ 完成工作 (Done)",
+133: "type": "text",
+134: "text": "🇮🇩 Selesai  🇧🇩 সম্পন্ন  🇲🇲 ပြီးပါပြီ",
+152: "label": "Problem",
+154: "displayText": "⚠️ 回报问题"
+158: "type": "text",
+159: "text": "⚠️ 回报问题 (Problem)",
+164: "type": "text",
+165: "text": "🇮🇩 Masalah  🇧🇩 সমস্যা  🇲🇲 ပြဿနာ",
+183: "label": "Tasks",
+185: "displayText": "📋 今日任务"
+189: "type": "text",
+190: "text": "📋 今日任务 (Tasks)",
+195: "type": "text",
+196: "text": "🇮🇩 Tugas  🇧🇩 কাজ  🇲🇲 တာဝန်",
+214: "label": "Supply",
+216: "displayText": "📦 用了资材"
+220: "type": "text",
+221: "text": "📦 用了资材 (Supply)",
+226: "type": "text",
+227: "text": "🇮🇩 Bahan  🇧🇩 উপাদান  🇲🇲 ပစ္စည်း",
+245: "label": "Delivery",
+247: "displayText": "🚚 回报出货"
+251: "type": "text",
+252: "text": "🚚 回报出货 (Delivery)",
+257: "type": "text",
+258: "text": "🇮🇩 Pengiriman  🇧🇩 ডেলিভারি  🇲🇲 ပို့ဆောင်ခြင်း",
+296: "type": "text",
+297: "text": zone.get('name', 'Zone'),
+303: "type": "text",
+304: "text": "选择区域 / Select Zone",
+321: "label": "选择 (Select)",
+357: "label": task.get('title', 'Task')[:20],
+359: "displayText": f"✅ 完成 {task.get('title')}"
+373: "type": "text",
+374: "text": f"[{zone_name}] 请选择要完成的任务 (Select task):",
+403: "type": "text",
+404: "text": item.get('name', 'Item')[:15],
+410: "type": "text",
+411: "text": f"库存: {item.get('quantity', 0)} {item.get('unit', '')}",
+428: "label": "选择 (Select)",
+461: "label": str(q),
+463: "displayText": str(q)
+472: "label": "更多 (More)",
+489: "type": "text",
+490: "text": f"请选择【{item_name}】的使用数量 (Select quantity):",
+510: "label": u[:20],
+512: "displayText": f"{qty} {u}"
+526: "type": "text",
+527: "text": f"请选择单位 (Select unit):",
+550: "type": "text",
+551: "text": "📸 请拍一张照片给我看 (Please take a photo):",
+558: "label": "📸 拍照 (Camera)"

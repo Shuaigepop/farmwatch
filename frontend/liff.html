@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FarmWatch - Worker Form</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/liff.css">
+</head>
+<body>
+    <div id="app">
+        <header class="app-header">
+            <div class="header-content">
+                <h1>FarmWatch 👨‍🌾</h1>
+                <p id="profile-name">Loading profile...</p>
+            </div>
+        </header>
+
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="delivery">
+                <span class="emoji">🚚</span>
+                <span class="label">Delivery<br><small>出货 / Pengiriman</small></span>
+            </button>
+            <button class="tab-btn" data-tab="supply">
+                <span class="emoji">📦</span>
+                <span class="label">Supply<br><small>资材 / Bahan</small></span>
+            </button>
+            <button class="tab-btn" data-tab="task">
+                <span class="emoji">✅</span>
+                <span class="label">Task<br><small>任务 / Tugas</small></span>
+            </button>
+        </nav>
+
+        <main class="tab-content">
+            <!-- DELIVERY FORM -->
+            <section id="tab-delivery" class="tab-pane active">
+                <form id="form-delivery" class="fw-form">
+                    <div class="form-group">
+                        <label>Weight (kg) <small>重量 / Berat</small></label>
+                        <input type="number" step="0.1" name="weight" required placeholder="0.0">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Baskets Out <small>借出 / Keluar</small></label>
+                            <input type="number" name="baskets_out" value="0" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Baskets In <small>收回 / Masuk</small></label>
+                            <input type="number" name="baskets_in" value="0" min="0" required>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="submit-btn primary-gradient">
+                        Submit (提交 / Hantar)
+                    </button>
+                </form>
+            </section>
+
+            <!-- SUPPLY FORM -->
+            <section id="tab-supply" class="tab-pane">
+                <form id="form-supply" class="fw-form">
+                    <div class="form-group">
+                        <label>Select Item <small>选择物品 / Pilih Barang</small></label>
+                        <select name="item_id" id="supply-items" required>
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Quantity Used <small>使用数量 / Kuantiti</small></label>
+                        <input type="number" step="0.1" name="quantity" required placeholder="0.0">
+                    </div>
+                    
+                    <button type="submit" class="submit-btn warning-gradient">
+                        Record (记录 / Rekod)
+                    </button>
+                </form>
+            </section>
+
+            <!-- TASK FORM -->
+            <section id="tab-task" class="tab-pane">
+                <form id="form-task" class="fw-form">
+                    <div class="form-group">
+                        <label>Select Zone <small>选择区域 / Pilih Zon</small></label>
+                        <select name="zone_id" id="task-zones" required>
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Select Task <small>选择任务 / Pilih Tugas</small></label>
+                        <select name="task_id" id="task-list" required>
+                            <option value="">Select a zone first...</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="submit-btn success-gradient">
+                        Complete (完成 / Selesai)
+                    </button>
+                </form>
+            </section>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div id="loader" class="loader-overlay hidden">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+    </div>
+
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="js/liff_app.js"></script>
+</body>
+</html>

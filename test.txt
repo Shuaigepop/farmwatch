@@ -1,0 +1,14 @@
+LINE 群组å¦‚æžœä¸Ž此å¤„设定çš„农场å称å®Œå…¨ç›¸åŒï¼Œ系统将自动绑定讯æ¯ã€‚
+<h3 class="section-title">使用者管ç† (User Management)</h3>
+<p class="text-secondary text-sm" style="margin-bottom: 1rem;">管ç†已åŠ å…¥çš„ LINE 群组ä¸Ž农场çš„连结ï¼Œé‡æ–°连结åŽ机器人ä¼šè‡ªåŠ¨æŽ¨æ’­é€šçŸ¥ã€‚</p>
+<h3 class="section-title">区域管ç† (Zone Management)</h3>
+<p class="text-secondary text-sm" style="margin-bottom: 1rem;">管ç†农场åº•ä¸‹çš„区域 (例如: AåŒºã€A1等)</p>
+container.innerHTML = `<p class="text-secondary text-sm">ç›®å‰没有任何农场ã€‚</p>`;
+container.innerHTML = `<p class="text-secondary text-sm">ç›®å‰没有任何使用者ã€‚</p>`;
+<label class="text-secondary text-sm">ç™»å…¥å¸å·</label>
+<label class="text-secondary text-sm">新密码 (ç•™空ä¸æ”¹)</label>
+<label class="text-secondary text-sm">ç™»å…¥å¸å·</label>
+container.innerHTML = `<p class="text-secondary text-sm">ç›®å‰没有åŠ å…¥任何 LINE 群组。</p>`;
+showToast('连结更新æˆåŠŸï¼Œ机器人已å‘é€šçŸ¥', 'success');
+select.innerHTML = '<option value="">选æ‹©农场以管ç†区域...</option>' +
+container.innerHTML = '<div class="text-secondary text-sm text-center" style="padding: 1rem;">该农场ç›®å‰没有设定任何区域ã€‚</div>';

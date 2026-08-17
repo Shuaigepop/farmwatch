@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  farmwatch-api:
+    build: .
+    container_name: farmwatch-api
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/uploads:/app/backend/uploads
+      - ./data/farmwatch.db:/app/backend/farmwatch.db
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Taipei

@@ -1,0 +1,43 @@
+{
+  "farms": [
+    {
+      "id": 4,
+      "name": "JB 菜园"
+    },
+    {
+      "id": 5,
+      "name": "KL 菜园"
+    },
+    {
+      "id": 6,
+      "name": "Ipoh 菜园"
+    }
+  ],
+  "groups": [
+    {
+      "group_id": "C7b51f0ddcdb4e5d488e79dc30f8e1491",
+      "farm_id": null,
+      "name": "菜園管理ai"
+    }
+  ],
+  "inventory": [
+    {
+      "id": 1,
+      "farm_id": 5,
+      "name": "yumi",
+      "qty": 2000.0
+    },
+    {
+      "id": 2,
+      "farm_id": 5,
+      "name": "yumi",
+      "qty": 2000.0
+    },
+    {
+      "id": 3,
+      "farm_id": 6,
+      "name": "xxx",
+      "qty": 1.0
+    }
+  ]
+}
