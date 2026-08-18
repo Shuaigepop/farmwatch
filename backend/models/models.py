@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 from database import Base
 
 def utc_now():
-    return datetime.now(timezone.utc)
+    return datetime.utcnow()
 
 class User(Base):
     __tablename__ = "users"
