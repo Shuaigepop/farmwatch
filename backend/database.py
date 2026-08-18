@@ -11,9 +11,15 @@ if db_url.startswith("postgres://"):
 elif db_url.startswith("postgresql://"):
     db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
+# Remove ?sslmode=require because asyncpg doesn't accept it in the URL
+if "?sslmode=" in db_url:
+    db_url = db_url.split("?")[0]
+
 connect_args = {}
 if "sqlite" in db_url:
     connect_args["check_same_thread"] = False
+elif "postgresql" in db_url:
+    connect_args["ssl"] = "require"
 
 engine = create_async_engine(
     db_url, 
