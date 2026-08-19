@@ -546,7 +546,7 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, db: 
                     url = "https://api.line.me/v2/bot/message/reply"
                     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {settings.LINE_CHANNEL_ACCESS_TOKEN}"}
                     payload = {"replyToken": event.reply_token, "messages": [{"type": "text", "text": reply, "quickReply": quick_reply}]}
-                    requests.post(url, headers=headers, json=payload)
+                    requests.post(url, headers=headers, json=payload, timeout=5)
                     return True
 
             # Check for rich menu intents first

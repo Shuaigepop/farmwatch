@@ -277,7 +277,7 @@ class LineService:
         
         try:
             import requests
-            requests.post(url, headers=headers, json=payload)
+            requests.post(url, headers=headers, json=payload, timeout=5)
         except Exception as e:
             print(f"[LineService] Failed to send flex menu reply: {e}")
 
@@ -348,7 +348,7 @@ class LineService:
             ]
         }
         try:
-            requests.post(url, headers=headers, json=payload)
+            requests.post(url, headers=headers, json=payload, timeout=5)
         except Exception as e:
             print(f"Error sending carousel: {e}")
 
@@ -386,7 +386,7 @@ class LineService:
                 }
             ]
         }
-        requests.post(url, headers=headers, json=payload)
+        requests.post(url, headers=headers, json=payload, timeout=5)
         
     def send_carousel_inventory(self, reply_token: str, items: list):
         if not settings.LINE_CHANNEL_ACCESS_TOKEN:
@@ -454,7 +454,7 @@ class LineService:
                 }
             ]
         }
-        requests.post(url, headers=headers, json=payload)
+        requests.post(url, headers=headers, json=payload, timeout=5)
 
     def send_quick_reply_quantities(self, reply_token: str, item_name: str, item_id: int):
         if not settings.LINE_CHANNEL_ACCESS_TOKEN:
@@ -502,7 +502,7 @@ class LineService:
                 }
             ]
         }
-        requests.post(url, headers=headers, json=payload)
+        requests.post(url, headers=headers, json=payload, timeout=5)
 
     def send_quick_reply_units(self, reply_token: str, item_name: str, item_id: int, qty: int, unit: str):
         if not settings.LINE_CHANNEL_ACCESS_TOKEN:
@@ -539,7 +539,7 @@ class LineService:
                 }
             ]
         }
-        requests.post(url, headers=headers, json=payload)
+        requests.post(url, headers=headers, json=payload, timeout=5)
         
     def send_camera_quick_reply(self, reply_token: str):
         if not settings.LINE_CHANNEL_ACCESS_TOKEN:
@@ -578,6 +578,6 @@ class LineService:
                 }
             ]
         }
-        requests.post(url, headers=headers, json=payload)
+        requests.post(url, headers=headers, json=payload, timeout=5)
 
 line_service = LineService()
