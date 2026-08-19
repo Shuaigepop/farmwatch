@@ -82,7 +82,7 @@ class LineService:
             "messages": [
                 {
                     "type": "flex",
-                    "altText": "FarmWatch 互动选单  (Menu)",
+                    "altText": "FarmWatch 互动选单 (Menu)",
                     "contents": {
                         "type": "bubble",
                         "size": "mega",
@@ -106,144 +106,41 @@ class LineService:
                             "spacing": "md",
                             "contents": [
                                 {
-                                            "type": "text",
-                                            "text": "✅ 完成工作 (Done)",
-                                            "weight": "bold",
-                                            "size": "md",
-                                            "color": "#1DB446"
-                                        },
-                                        {
-                                            "type": "text",
-                                            "text": "🇮🇩 Selesai  🇧🇩 সম্পন্ন  🇲🇲 ပြီးပါပြီ",
-                                            "size": "xs",
-                                            "color": "#666666",
-                                            "wrap": True
-                                        }
-                                    ]
-                                },
-                                {
-                                    "type": "box",
-                                    "layout": "vertical",
-                                    "margin": "md",
-                                    "spacing": "sm",
-                                    "cornerRadius": "md",
-                                    "borderWidth": "1px",
-                                    "borderColor": "#aaaaaa",
-                                    "paddingAll": "md",
+                                    "type": "button",
+                                    "style": "primary",
+                                    "color": "#17a2b8",
                                     "action": {
                                         "type": "postback",
-                                        "label": "Problem",
-                                        "data": "action=problem_init",
-                                        "displayText": "⚠️ 回报问题"
-                                    },
-                                    "contents": [
-                                        {
-                                            "type": "text",
-                                            "text": "⚠️ 回报问题 (Problem)",
-                                            "weight": "bold",
-                                            "size": "md"
-                                        },
-                                        {
-                                            "type": "text",
-                                            "text": "🇮🇩 Masalah  🇧🇩 সমস্যা  🇲🇲 ပြဿနာ",
-                                            "size": "xs",
-                                            "color": "#666666",
-                                            "wrap": True
-                                        }
-                                    ]
+                                        "label": "📋 待办事项 / Tasks",
+                                        "data": "action=done_init"
+                                    }
                                 },
                                 {
-                                    "type": "box",
-                                    "layout": "vertical",
-                                    "margin": "md",
-                                    "spacing": "sm",
-                                    "cornerRadius": "md",
-                                    "borderWidth": "1px",
-                                    "borderColor": "#aaaaaa",
-                                    "paddingAll": "md",
+                                    "type": "button",
+                                    "style": "secondary",
                                     "action": {
                                         "type": "postback",
-                                        "label": "Tasks",
-                                        "data": "action=show_tasks",
-                                        "displayText": "📋 今日任务"
-                                    },
-                                    "contents": [
-                                        {
-                                            "type": "text",
-                                            "text": "📋 今日任务 (Tasks)",
-                                            "weight": "bold",
-                                            "size": "md"
-                                        },
-                                        {
-                                            "type": "text",
-                                            "text": "🇮🇩 Tugas  🇧🇩 কাজ  🇲🇲 တာဝန်",
-                                            "size": "xs",
-                                            "color": "#666666",
-                                            "wrap": True
-                                        }
-                                    ]
+                                        "label": "🚚 回报出货 / Delivery",
+                                        "data": "action=delivery_init"
+                                    }
                                 },
                                 {
-                                    "type": "box",
-                                    "layout": "vertical",
-                                    "margin": "md",
-                                    "spacing": "sm",
-                                    "cornerRadius": "md",
-                                    "borderWidth": "1px",
-                                    "borderColor": "#aaaaaa",
-                                    "paddingAll": "md",
+                                    "type": "button",
+                                    "style": "secondary",
                                     "action": {
                                         "type": "postback",
-                                        "label": "Supply",
-                                        "data": "action=supply_init",
-                                        "displayText": "📦 用了资材"
-                                    },
-                                    "contents": [
-                                        {
-                                            "type": "text",
-                                            "text": "📦 用了资材 (Supply)",
-                                            "weight": "bold",
-                                            "size": "md"
-                                        },
-                                        {
-                                            "type": "text",
-                                            "text": "🇮🇩 Bahan  🇧🇩 উপাদান  🇲🇲 ပစ္စည်း",
-                                            "size": "xs",
-                                            "color": "#666666",
-                                            "wrap": True
-                                        }
-                                    ]
+                                        "label": "📦 消耗库存 / Inventory",
+                                        "data": "action=supply_init"
+                                    }
                                 },
                                 {
-                                    "type": "box",
-                                    "layout": "vertical",
-                                    "margin": "md",
-                                    "spacing": "sm",
-                                    "cornerRadius": "md",
-                                    "borderWidth": "1px",
-                                    "borderColor": "#aaaaaa",
-                                    "paddingAll": "md",
+                                    "type": "button",
+                                    "style": "secondary",
                                     "action": {
                                         "type": "postback",
-                                        "label": "Delivery",
-                                        "data": "action=delivery_init",
-                                        "displayText": "🚚 回报出货"
-                                    },
-                                    "contents": [
-                                        {
-                                            "type": "text",
-                                            "text": "🚚 回报出货 (Delivery)",
-                                            "weight": "bold",
-                                            "size": "md"
-                                        },
-                                        {
-                                            "type": "text",
-                                            "text": "🇮🇩 Pengiriman  🇧🇩 ডেলিভারি  🇲🇲 ပို့ဆောင်ခြင်း",
-                                            "size": "xs",
-                                            "color": "#666666",
-                                            "wrap": True
-                                        }
-                                    ]
+                                        "label": "⚠️ 回报问题 / Problem",
+                                        "data": "action=problem_init"
+                                    }
                                 }
                             ]
                         }
@@ -253,9 +150,11 @@ class LineService:
         }
         
         try:
+            import requests
             requests.post(url, headers=headers, json=payload)
         except Exception as e:
             print(f"[LineService] Failed to send flex menu reply: {e}")
+
     def send_carousel_zones(self, reply_token: str, zones: list):
         if not settings.LINE_CHANNEL_ACCESS_TOKEN:
             return
