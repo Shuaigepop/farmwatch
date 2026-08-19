@@ -4,7 +4,7 @@ import { api, showToast } from '../api.js';
 
 export async function renderSettings(container) {
   const user = auth.getUser();
-  if (user.role !== 'boss') {
+  if ((user.role || '').toLowerCase() !== 'boss') {
     container.innerHTML = `<div class="page-container"><h3>Unauthorized</h3><p>Only Boss can access settings.</p></div>`;
     return;
   }

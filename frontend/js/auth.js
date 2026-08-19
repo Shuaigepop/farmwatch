@@ -52,7 +52,7 @@ export const auth = {
 
   hasRole(role) {
     const user = this.getUser();
-    return user && user.role === role;
+    return user && (user.role || '').toLowerCase() === role.toLowerCase();
   },
 
   canAccessFarm(farmId) {

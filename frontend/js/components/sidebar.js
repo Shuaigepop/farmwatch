@@ -24,12 +24,12 @@ export async function renderSidebar(container, currentRoute) {
     { id: 'scheduler', icon: '🤖', label: 'Scheduler (AI派发)', route: 'index.html#/scheduler' }
   ];
 
-  if (user.role === 'boss') {
+  if ((user.role || '').toLowerCase() === 'boss') {
     navItems.push({ id: 'settings', icon: '⚙️', label: t('nav.settings'), route: 'index.html#/settings' });
   }
 
   let farmSelectorHtml = '';
-  if (['boss', 'supervisor'].includes(user.role)) {
+  if (['boss', 'supervisor'].includes((user.role || '').toLowerCase())) {
     let farms = [];
     try {
       farms = await api.farms.list();
@@ -55,7 +55,7 @@ export async function renderSidebar(container, currentRoute) {
         <div class="avatar">${user.name.charAt(0)}</div>
         <div class="user-info">
           <div class="user-name">${user.name}</div>
-          <div class="user-role">${roleLabels[user.role]}</div>
+          <div class="user-role">${roleLabels[(user.role || '').toLowerCase()]}</div>
         </div>
       </div>
       
