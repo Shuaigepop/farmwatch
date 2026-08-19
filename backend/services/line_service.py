@@ -28,17 +28,21 @@ class LineService:
             )
 
     def send_reply(self, reply_token: str, text: str):
-        # 回覆訊息 (Reply to message)
+        # 回复讯息 (Reply to message)
         if not settings.LINE_CHANNEL_ACCESS_TOKEN:
+            print("[LINE_SERVICE] No LINE_CHANNEL_ACCESS_TOKEN configured.")
             return
-        with ApiClient(self.configuration) as api_client:
-            line_bot_api = MessagingApi(api_client)
-            line_bot_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=reply_token,
-                    messages=[TextMessage(text=text)]
+        try:
+            with ApiClient(self.configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=reply_token,
+                        messages=[TextMessage(text=text)]
+                    )
                 )
-            )
+        except Exception as e:
+            print(f"[LINE_SERVICE] Failed to send reply: {e}")
 
     def get_message_content(self, message_id: str) -> bytes:
         # 取得圖片或檔案內容 (Get image/file content)
@@ -62,8 +66,9 @@ class LineService:
             return {"groupName": "Unknown Group"}
 
     def send_reply_flex_menu(self, reply_token: str):
-        # 发送 Flex Message 互动选单 (Reply)
+        # 呼叫 Flex Message 选单  (Reply)
         if not settings.LINE_CHANNEL_ACCESS_TOKEN:
+            print("[LINE_SERVICE] No LINE_CHANNEL_ACCESS_TOKEN configured for flex menu.")
             return
             
         url = "https://api.line.me/v2/bot/message/reply"
@@ -77,7 +82,7 @@ class LineService:
             "messages": [
                 {
                     "type": "flex",
-                    "altText": "FarmWatch 互动选单 (Menu)",
+                    "altText": "FarmWatch 互动选单  (Menu)",
                     "contents": {
                         "type": "bubble",
                         "size": "mega",
@@ -87,20 +92,13 @@ class LineService:
                             "contents": [
                                 {
                                     "type": "text",
-                                    "text": "FarmWatch 农场系统",
+                                    "text": "FarmWatch 智能助理",
                                     "weight": "bold",
-                                    "color": "#1DB446",
-                                    "size": "sm"
-                                },
-                                {
-                                    "type": "text",
-                                    "text": "👇 互动选单 (Menu)",
-                                    "weight": "bold",
-                                    "size": "xl",
-                                    "margin": "md",
-                                    "wrap": True
+                                    "size": "lg",
+                                    "color": "#ffffff"
                                 }
-                            ]
+                            ],
+                            "backgroundColor": "#28a745"
                         },
                         "body": {
                             "type": "box",
@@ -108,22 +106,6 @@ class LineService:
                             "spacing": "md",
                             "contents": [
                                 {
-                                    "type": "box",
-                                    "layout": "vertical",
-                                    "margin": "md",
-                                    "spacing": "sm",
-                                    "cornerRadius": "md",
-                                    "borderWidth": "2px",
-                                    "borderColor": "#1DB446",
-                                    "paddingAll": "md",
-                                    "action": {
-                                        "type": "postback",
-                                        "label": "Done",
-                                        "data": "action=done_init",
-                                        "displayText": "✅ 完成工作"
-                                    },
-                                    "contents": [
-                                        {
                                             "type": "text",
                                             "text": "✅ 完成工作 (Done)",
                                             "weight": "bold",
