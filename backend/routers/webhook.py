@@ -489,15 +489,15 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, db: 
                 await db.commit()
                 
                 if text.strip() in ["@menu", "@菜单", "主选单", "选单"]:
-                    if reply_token:
-                        line_service.send_reply_flex_menu(reply_token)
+                    if getattr(event, 'reply_token', None):
+                        line_service.send_reply_flex_menu(event.reply_token)
                     return True
                 
                 if "回报出货" in text or "harvest" in text.lower() or "delivery" in text.lower():
                     reply = "照片收到前，请先上传出货单/收据的照片 📷\nPlease upload a photo of the delivery receipt 📷\nSila muat naik gambar resit penghantaran 📷"
                     _bot_states[target_id] = {"action": "report_harvest_photo"}
-                    if reply_token:
-                        line_service.send_reply(reply_token, reply)
+                    if getattr(event, 'reply_token', None):
+                        line_service.send_reply(event.reply_token, reply)
                     else:
                         line_service.send_text_message(target_id, reply)
                     return True
