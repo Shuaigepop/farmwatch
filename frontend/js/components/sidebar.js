@@ -13,7 +13,14 @@ export async function renderSidebar(container, currentRoute) {
   };
 
   const navItems = [
-    { id: 'dashboard', icon: '📊', label: t('nav.dashboard'), route: 'index.html#/dashboard' },
+    { id: 'dashboard', icon: '📊', label: t('nav.dashboard'), route: 'index.html#/dashboard' }
+  ];
+
+  if ((user.role || '').toLowerCase() === 'boss') {
+    navItems.push({ id: 'settings', icon: '⚙️', label: t('nav.settings'), route: 'index.html#/settings' });
+  }
+
+  navItems.push(
     { id: 'photos', icon: '🖼️', label: t('nav.photoWall'), route: 'index.html#/photos' },
     { id: 'messages', icon: '💬', label: t('nav.messages'), route: 'index.html#/messages' },
     { id: 'progress', icon: '📋', label: t('nav.progress'), route: 'index.html#/progress' },
@@ -22,11 +29,7 @@ export async function renderSidebar(container, currentRoute) {
     { id: 'inventory', icon: '📦', label: t('nav.inventory') || 'Inventory (资材设定)', route: 'index.html#/inventory' },
     { id: 'deliveries', icon: '🧾', label: 'Deliveries (出货对账)', route: 'index.html#/deliveries' },
     { id: 'scheduler', icon: '🤖', label: 'Scheduler (AI派发)', route: 'index.html#/scheduler' }
-  ];
-
-  if ((user.role || '').toLowerCase() === 'boss') {
-    navItems.push({ id: 'settings', icon: '⚙️', label: t('nav.settings'), route: 'index.html#/settings' });
-  }
+  );
 
   let farmSelectorHtml = '';
   if (['boss', 'supervisor'].includes((user.role || '').toLowerCase())) {
