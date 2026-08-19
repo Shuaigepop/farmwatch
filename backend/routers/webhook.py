@@ -631,6 +631,11 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, db: 
                                 farm_id = farm.id
                         await db.commit()
                     
+            if not farm_id:
+                if getattr(event, 'reply_token', None):
+                    line_service.send_reply(event.reply_token, "⚠️ 此群组尚未连结到系统中的任何农场！\n\n请在群组内输入『@link 农场ID』\n例如：@link 1\n\n(Not linked to any farm. Please link by typing @link [ID])")
+                return True
+                
             if farm_id:
                 import urllib.parse
                 data_dict = dict(urllib.parse.parse_qsl(event.postback.data))
