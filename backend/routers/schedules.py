@@ -23,8 +23,13 @@ class ApproveRequest(BaseModel):
 
 @router.post("/{farm_id}/generate")
 async def generate_schedule(farm_id: int, db: AsyncSession = Depends(get_db)):
-    tasks = await generate_daily_schedule(farm_id, db)
-    return {"message": "Schedule generated", "tasks": tasks}
+    try:
+        tasks = await generate_daily_schedule(farm_id, db)
+        return {"message": "Schedule generated", "tasks": tasks}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"AI schedule generation failed: {str(e)}")
 
 @router.get("/{farm_id}/today")
 async def get_today_schedule(farm_id: int, db: AsyncSession = Depends(get_db)):

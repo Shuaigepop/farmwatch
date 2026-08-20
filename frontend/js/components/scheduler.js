@@ -40,7 +40,8 @@ export async function renderScheduler(container) {
       await loadData();
     } catch (e) {
       console.error(e);
-      alert("Error generating schedule");
+      const msg = e.message || "Unknown error";
+      alert("Error generating schedule:\n" + msg);
       loading = false;
       render();
     }
