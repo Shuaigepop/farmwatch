@@ -45,7 +45,7 @@ class AIService:
         """
         def _call():
             response = self.client.models.generate_content(
-                model='gemini-1.5-flash',
+                model='gemini-3.5-flash',
                 contents=[img, prompt],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json"
@@ -71,7 +71,7 @@ class AIService:
         """
         def _call():
             response = self.client.models.generate_content(
-                model='gemini-1.5-flash',
+                model='gemini-3.5-flash',
                 contents=[prompt]
             )
             return response.text
@@ -104,7 +104,7 @@ class AIService:
         """
         def _call():
             response = self.client.models.generate_content(
-                model='gemini-1.5-flash',
+                model='gemini-3.5-flash',
                 contents=[prompt]
             )
             return response.text
@@ -128,7 +128,7 @@ class AIService:
         """
         def _call():
             response = self.client.models.generate_content(
-                model='gemini-1.5-flash',
+                model='gemini-3.5-flash',
                 contents=[prompt],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json"
@@ -152,7 +152,7 @@ class AIService:
         """
         def _call():
             response = self.client.models.generate_content(
-                model='gemini-1.5-flash',
+                model='gemini-3.5-flash',
                 contents=[prompt]
             )
             return response.text.strip()
@@ -164,7 +164,7 @@ class AIService:
     def _generate_generic_content_sync(self, prompt: str) -> str:
         def _call():
             response = self.client.models.generate_content(
-                model='gemini-1.5-flash',
+                model='gemini-3.5-flash',
                 contents=prompt,
             )
             return response.text

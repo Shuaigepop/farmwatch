@@ -28,7 +28,7 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
     请根据这些状况提供建议，建议农场今天应该执行哪些任务来处理这些病害问题？
     """
     resp1 = ai_service.client.models.generate_content(
-        model='gemini-1.5-flash',
+        model='gemini-3.5-flash',
         contents=[prompt1]
     )
     agent1_suggestion = resp1.text
@@ -46,7 +46,7 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
     请分析是否有极低库存的项目，并建议今天是否需要盘点或采购任务？
     """
     resp2 = ai_service.client.models.generate_content(
-        model='gemini-1.5-flash',
+        model='gemini-3.5-flash',
         contents=[prompt2]
     )
     agent2_suggestion = resp2.text
@@ -95,7 +95,7 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
     """
     
     resp3 = ai_service.client.models.generate_content(
-        model='gemini-1.5-flash',
+        model='gemini-3.5-flash',
         contents=[prompt3],
         config=types.GenerateContentConfig(
             response_mime_type="application/json"
@@ -103,6 +103,16 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
     )
     
     tasks_json = resp3.text
+    
+    # Clean up markdown formatting if the model returned it despite response_mime_type
+    tasks_json = tasks_json.strip()
+    if tasks_json.startswith("```json"):
+        tasks_json = tasks_json[7:]
+    elif tasks_json.startswith("```"):
+        tasks_json = tasks_json[3:]
+    if tasks_json.endswith("```"):
+        tasks_json = tasks_json[:-3]
+    tasks_json = tasks_json.strip()
     
     today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     
