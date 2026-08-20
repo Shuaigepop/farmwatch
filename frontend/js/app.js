@@ -1,17 +1,17 @@
-import { auth } from './auth.js?v=13';
-import { setLanguage, getCurrentLanguage, t } from './i18n.js?v=13';
-import { renderLogin } from './components/login.js?v=13';
-import { renderSidebar } from './components/sidebar.js?v=13';
-import { renderDashboard } from './components/dashboard.js?v=13';
-import { renderPhotoWall } from './components/photo-wall.js?v=13';
-import { renderMessages } from './components/message-feed.js?v=13';
-import { renderHealthReport } from './components/health-report.js?v=13';
-import { renderProgress } from './components/progress.js?v=13';
-import { renderDailySummary } from './components/daily-summary.js?v=13';
-import { renderSettings } from './components/settings.js?v=13';
-import { renderInventory } from './components/inventory.js?v=13';
-import { renderDeliveries } from './components/deliveries.js?v=13';
-import { renderScheduler } from './components/scheduler.js?v=13';
+import { auth } from './auth.js?v=14';
+import { setLanguage, getCurrentLanguage, t } from './i18n.js?v=14';
+import { renderLogin } from './components/login.js?v=14';
+import { renderSidebar } from './components/sidebar.js?v=14';
+import { renderDashboard } from './components/dashboard.js?v=14';
+import { renderPhotoWall } from './components/photo-wall.js?v=14';
+import { renderMessages } from './components/message-feed.js?v=14';
+import { renderHealthReport } from './components/health-report.js?v=14';
+import { renderProgress } from './components/progress.js?v=14';
+import { renderDailySummary } from './components/daily-summary.js?v=14';
+import { renderSettings } from './components/settings.js?v=14';
+import { renderInventory } from './components/inventory.js?v=14';
+import { renderDeliveries } from './components/deliveries.js?v=14';
+import { renderScheduler } from './components/scheduler.js?v=14';
 const appContainer = document.getElementById('app');
 
 // App Shell (Sidebar + Header + Main Content)

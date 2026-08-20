@@ -45,7 +45,7 @@ export async function renderDashboard(container) {
     if (params.farm_id) {
         try {
             zonePlans = await apiFetch(`/farms/${params.farm_id}/zone-plans`);
-            crops = await api.crops.list(params.farm_id);
+            crops = await api.farms.listCrops(params.farm_id);
         } catch(e) { console.error("Error loading zone plans", e); }
     }
 
