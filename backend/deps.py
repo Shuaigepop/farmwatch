@@ -35,8 +35,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
 
 def require_role(roles: list[str]):
     async def role_checker(current_user: User = Depends(get_current_user)):
-        # 檢查權限 (Check permissions)
-        if current_user.role not in roles:
+        # 权限检查 (Check permissions)
+        if (current_user.role or "").lower() not in [r.lower() for r in roles]:
             raise HTTPException(status_code=403, detail="Operation not permitted")
         return current_user
     return role_checker
