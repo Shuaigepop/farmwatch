@@ -9,6 +9,7 @@ from database import init_db, AsyncSessionLocal
 from models.models import User, Farm, LineGroup
 from routers import auth, webhook, messages, photos, farms, tasks, inventory, reports, deliveries, schedules, liff, test_cron, zone_plans
 from services.scheduler import init_scheduler
+from seed_full_demo import auto_seed_all_farms
 from passlib.context import CryptContext
 from sqlalchemy import select
 
@@ -86,6 +87,9 @@ async def startup_event():
             session.add_all([admin_user, supervisor_user, leader_user])
             await session.commit()
             print("Default seed data created: 3 farms + 3 users (admin/admin123, supervisor/super123, leader/leader123)")
+            
+        # 自动填充所有农场的示范规划数据 (Auto seed demo planning data for all farms)
+        await auto_seed_all_farms(session)
 
 # Include API routers
 app.include_router(auth.router)

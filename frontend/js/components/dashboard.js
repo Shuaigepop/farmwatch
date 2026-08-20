@@ -1,6 +1,6 @@
 import { t, getCurrentLanguage } from '../i18n.js';
 import { auth } from '../auth.js';
-import { api } from '../api.js';
+import { api, apiFetch } from '../api.js';
 
 export async function renderDashboard(container) {
   const user = auth.getUser();
