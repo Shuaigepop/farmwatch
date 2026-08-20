@@ -7,7 +7,7 @@ from pathlib import Path
 
 from database import init_db, AsyncSessionLocal
 from models.models import User, Farm, LineGroup
-from routers import auth, webhook, messages, photos, farms, tasks, inventory, reports, deliveries, schedules, liff, test_cron
+from routers import auth, webhook, messages, photos, farms, tasks, inventory, reports, deliveries, schedules, liff, test_cron, zone_plans
 from services.scheduler import init_scheduler
 from passlib.context import CryptContext
 from sqlalchemy import select
@@ -100,6 +100,7 @@ app.include_router(deliveries.router)
 app.include_router(schedules.router)
 app.include_router(liff.router)
 app.include_router(test_cron.router)
+app.include_router(zone_plans.router)
 
 # Serve uploaded files
 os.makedirs("./uploads", exist_ok=True)

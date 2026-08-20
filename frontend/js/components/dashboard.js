@@ -39,6 +39,15 @@ export async function renderDashboard(container) {
     const messages = await api.messages.list(params);
     const photos = await api.photos.list(params);
     const tasks = await api.tasks.list(params);
+    
+    let zonePlans = [];
+    let crops = [];
+    if (params.farm_id) {
+        try {
+            zonePlans = await apiFetch(`/farms/${params.farm_id}/zone-plans`);
+            crops = await api.crops.list(params.farm_id);
+        } catch(e) { console.error("Error loading zone plans", e); }
+    }
 
     // Calculate stats
     const today = new Date().toISOString().split('T')[0];
@@ -113,6 +122,62 @@ export async function renderDashboard(container) {
             </div>
           </div>
 
+        <!-- FARM PLANNING MAP -->
+        <h3 class="section-title" style="margin-bottom: 1rem;">🌾 全农场作物规划图 (Farm Planning Map)</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+          ${zonePlans.map(plan => {
+             let statusColor = 'var(--text-secondary)';
+             let statusText = '空置 (Idle)';
+             let countdown = '';
+             let emoji = '⚪';
+             
+             if (plan.status === 'planted' || plan.status === 'growing') {
+                 statusColor = 'var(--primary)';
+                 statusText = '生长中 (Growing)';
+                 emoji = '🌿';
+                 if (plan.days_left !== null) {
+                     if (plan.days_left <= 0) {
+                         statusColor = 'var(--warning)';
+                         countdown = '<br><span style="color:var(--warning);font-weight:bold;">⚠️ 今日可采收</span>';
+                     } else if (plan.days_left <= 3) {
+                         statusColor = 'var(--warning)';
+                         countdown = \`<br><span style="color:var(--warning);font-weight:bold;">⚠️ \${plan.days_left} 天后采收</span>\`;
+                     } else {
+                         countdown = \`<br><span class="text-secondary">剩余 \${plan.days_left} 天</span>\`;
+                     }
+                 }
+             } else if (plan.status === 'harvesting') {
+                 statusColor = '#d97706';
+                 statusText = '采收期 (Harvesting)';
+                 emoji = '🍎';
+             } else if (plan.status === 'preparing') {
+                 statusColor = '#8b5cf6';
+                 statusText = '翻土重种 (Preparing)';
+                 emoji = '🚧';
+             }
+             
+             const parentStr = plan.parent_zone ? \`\${plan.parent_zone} - \` : '';
+             
+             return \`
+             <div class="glass-panel" style="padding: 1rem; cursor: pointer; border-left: 4px solid \${statusColor};" onclick="openZonePlanModal(\${plan.id})">
+                 <div class="flex justify-between items-center">
+                     <h4 style="margin: 0; font-size: 1.1rem;">\${parentStr}\${plan.zone_name}</h4>
+                     <span style="font-size: 1.2rem;">\${emoji}</span>
+                 </div>
+                 <div style="margin-top: 0.5rem; font-size: 0.95rem;">
+                     <strong>\${plan.crop_name || '未种植'}</strong>
+                     <div style="color: \${statusColor}; margin-top: 0.2rem;">\${statusText}\${countdown}</div>
+                 </div>
+                 \${plan.next_crop_name ? \`<div style="margin-top: 0.5rem; font-size: 0.8rem;" class="text-secondary">▶ 下一轮: \${plan.next_crop_name}</div>\` : ''}
+             </div>
+             \`;
+          }).join('')}
+          \${zonePlans.length === 0 ? '<p class="text-secondary">没有规划数据。请先建立区域。</p>' : ''}
+        </div>
+
+        <!-- ZONE PLAN MODAL CONTAINER -->
+        <div id="zone-plan-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+        </div>
 
         <div class="stats-grid slide-in">
           <div class="stat-card">
@@ -173,6 +238,125 @@ export async function renderDashboard(container) {
         </div>
       </div>
     `;
+    
+      // Inject Modal logic globally
+      window.openZonePlanModal = (planId) => {
+          const plan = zonePlans.find(p => p.id === planId);
+          if (!plan) return;
+          
+          const cropOptions = crops.map(c => \`<option value="\${c.id}" \${plan.crop_id === c.id ? 'selected' : ''}>\${c.name}</option>\`).join('');
+          
+          const modalHtml = \`
+            <div class="glass-panel" style="background: var(--bg-primary); padding: 2rem; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+                <div class="flex justify-between items-center" style="margin-bottom: 1.5rem;">
+                    <h3 style="margin:0;">\${plan.parent_zone ? plan.parent_zone + ' - ' : ''}\${plan.zone_name} 规划详情</h3>
+                    <button class="icon-btn" onclick="document.getElementById('zone-plan-modal').style.display='none'">❌</button>
+                </div>
+                
+                <div class="form-group">
+                    <label>状态 (Status)</label>
+                    <select id="zp-status" class="form-control">
+                        <option value="idle" \${plan.status === 'idle' ? 'selected' : ''}>空置 (Idle)</option>
+                        <option value="planted" \${plan.status === 'planted' || plan.status === 'growing' ? 'selected' : ''}>生长中 (Planted/Growing)</option>
+                        <option value="harvesting" \${plan.status === 'harvesting' ? 'selected' : ''}>采收期 (Harvesting)</option>
+                        <option value="preparing" \${plan.status === 'preparing' ? 'selected' : ''}>翻土重种 (Preparing)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>当前作物 (Current Crop)</label>
+                    <select id="zp-crop" class="form-control">
+                        <option value="">-- 选择作物 --</option>
+                        \${cropOptions}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>种植日期 (Planted Date)</label>
+                    <input type="date" id="zp-date" class="form-control" value="\${plan.planted_date || ''}">
+                </div>
+                
+                <div class="form-group">
+                    <label>下一轮轮作 (Next Crop)</label>
+                    <input type="text" id="zp-next" class="form-control" value="\${plan.next_crop_name || ''}" placeholder="例如: 黄瓜">
+                </div>
+                
+                <div class="form-group">
+                    <label>历史采收记录 (Last Harvest kg)</label>
+                    <input type="number" step="0.1" id="zp-kg" class="form-control" value="\${plan.last_harvest_kg || ''}">
+                </div>
+                
+                <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                    <button class="btn btn-primary" style="flex:1;" onclick="saveZonePlan(\${plan.id})">保存设定 (Save)</button>
+                    \${plan.status === 'growing' ? \`<button class="btn btn-warning" style="flex:1;" onclick="actionZonePlan(\${plan.id}, 'harvest')">▶ 开始采收</button>\` : ''}
+                    \${plan.status === 'harvesting' ? \`<button class="btn btn-secondary" style="flex:1; background:#8b5cf6;" onclick="actionZonePlan(\${plan.id}, 'finish')">▶ 采收结束 (去翻土)</button>\` : ''}
+                    \${plan.status === 'preparing' ? \`<button class="btn btn-danger" style="flex:1;" onclick="actionZonePlan(\${plan.id}, 'clear')">▶ 清空区域</button>\` : ''}
+                </div>
+            </div>
+          \`;
+          
+          const modal = document.getElementById('zone-plan-modal');
+          modal.innerHTML = modalHtml;
+          modal.style.display = 'flex';
+      };
+      
+      window.saveZonePlan = async (planId) => {
+          const status = document.getElementById('zp-status').value;
+          const cropId = document.getElementById('zp-crop').value;
+          const plantedDate = document.getElementById('zp-date').value;
+          const nextCrop = document.getElementById('zp-next').value;
+          const kg = document.getElementById('zp-kg').value;
+          
+          if (status === 'idle') {
+              await actionZonePlan(planId, 'clear');
+              return;
+          }
+          
+          if (!cropId || !plantedDate) {
+              alert("必须选择作物和种植日期");
+              return;
+          }
+          
+          try {
+              // Create or replace crop plan
+              await apiFetch(\`/farms/\${params.farm_id}/zone-plans\`, {
+                  method: 'POST',
+                  headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify({
+                      zone_id: zonePlans.find(p => p.id === planId).zone_id,
+                      crop_id: parseInt(cropId),
+                      planted_date: plantedDate
+                  })
+              });
+              
+              // Update extra info
+              await apiFetch(\`/farms/zone-plans/\${planId}\`, {
+                  method: 'PUT',
+                  headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify({
+                      status: status,
+                      next_crop_name: nextCrop || null,
+                      last_harvest_kg: kg ? parseFloat(kg) : null
+                  })
+              });
+              
+              document.getElementById('zone-plan-modal').style.display = 'none';
+              renderDashboard(container); // reload
+          } catch(e) {
+              alert("保存失败");
+          }
+      };
+      
+      window.actionZonePlan = async (planId, action) => {
+          try {
+              await apiFetch(\`/farms/zone-plans/\${planId}/action/\${action}\`, { method: 'POST' });
+              document.getElementById('zone-plan-modal').style.display = 'none';
+              renderDashboard(container); // reload
+          } catch(e) {
+              alert("操作失败");
+          }
+      };
+      
     }
   } catch (err) {
     console.error('Failed to load dashboard data:', err);

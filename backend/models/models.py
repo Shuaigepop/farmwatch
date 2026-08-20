@@ -219,3 +219,24 @@ class ProposedSchedule(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     farm = relationship('Farm')
+
+class ZoneCropPlan(Base):
+    __tablename__ = "zone_crop_plans"
+    id = Column(Integer, primary_key=True, index=True)
+    farm_id = Column(Integer, ForeignKey("farms.id"))
+    zone_id = Column(Integer, ForeignKey("farm_zones.id"))
+    crop_id = Column(Integer, ForeignKey("crops.id"), nullable=True)
+    crop_name = Column(String(100))
+    planted_date = Column(Date, nullable=True)
+    expected_harvest_date = Column(Date, nullable=True)
+    harvest_end_date = Column(Date, nullable=True)
+    status = Column(String(50), default="idle")
+    next_crop_name = Column(String(100), nullable=True)
+    last_harvest_kg = Column(Float, nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    farm = relationship('Farm')
+    zone = relationship('FarmZone')
+    crop = relationship('Crop')
