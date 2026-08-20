@@ -44,7 +44,7 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
     """
     try:
         # 1. Fetch recent photos with issues
-        yesterday = datetime.now(timezone.utc) - timedelta(days=1)
+        yesterday = datetime.utcnow() - timedelta(days=1)
         res = await db.execute(select(models.Photo).where(
             models.Photo.farm_id == farm_id,
             models.Photo.captured_at >= yesterday,
@@ -77,7 +77,7 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
             models.HarvestPlan.status == "growing"
         ))
         growing_plans = harvest_res.scalars().all()
-        today_date = datetime.now(timezone.utc).date()
+        today_date = datetime.utcnow().date()
         impending_harvests = []
         for plan in growing_plans:
             if plan.expected_harvest_date:
@@ -149,7 +149,7 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
         
         print(f"[AI Scheduler] Parsed {len(parsed)} tasks successfully")
 
-        today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        today_str = datetime.utcnow().strftime("%Y-%m-%d")
         
         # Save to ProposedSchedule
         exist_res = await db.execute(select(models.ProposedSchedule).where(
