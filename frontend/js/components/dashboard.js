@@ -123,25 +123,25 @@ export async function renderDashboard(container) {
           </div>
 
         <!-- FARM PLANNING MAP -->
-        <h3 class="section-title" style="margin-bottom: 1rem;">🌾 全农场作物规划图 (Farm Planning Map)</h3>
+        <h3 class="section-title" style="margin-bottom: 1rem;">&#x1F33E; 全农场作物规划图 (Farm Planning Map)</h3>
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
           ${zonePlans.map(plan => {
              let statusColor = 'var(--text-secondary)';
              let statusText = '空置 (Idle)';
              let countdown = '';
-             let emoji = '⚪';
+             let emoji = '&#x26AA;';
              
              if (plan.status === 'planted' || plan.status === 'growing') {
                  statusColor = 'var(--primary)';
                  statusText = '生长中 (Growing)';
-                 emoji = '🌿';
+                 emoji = '&#x1F33F;';
                  if (plan.days_left !== null) {
                      if (plan.days_left <= 0) {
                          statusColor = 'var(--warning)';
-                         countdown = '<br><span style="color:var(--warning);font-weight:bold;">⚠️ 今日可采收</span>';
+                         countdown = '<br><span style="color:var(--warning);font-weight:bold;">&#x26A0;&#xFE0F; 今日可采收</span>';
                      } else if (plan.days_left <= 3) {
                          statusColor = 'var(--warning)';
-                         countdown = \`<br><span style="color:var(--warning);font-weight:bold;">⚠️ \${plan.days_left} 天后采收</span>\`;
+                         countdown = \`<br><span style="color:var(--warning);font-weight:bold;">&#x26A0;&#xFE0F; \${plan.days_left} 天后采收</span>\`;
                      } else {
                          countdown = \`<br><span class="text-secondary">剩余 \${plan.days_left} 天</span>\`;
                      }
@@ -149,11 +149,11 @@ export async function renderDashboard(container) {
              } else if (plan.status === 'harvesting') {
                  statusColor = '#d97706';
                  statusText = '采收期 (Harvesting)';
-                 emoji = '🍎';
+                 emoji = '&#x1F34E;';
              } else if (plan.status === 'preparing') {
                  statusColor = '#8b5cf6';
                  statusText = '翻土重种 (Preparing)';
-                 emoji = '🚧';
+                 emoji = '&#x1F6A7;';
              }
              
              const parentStr = plan.parent_zone ? \`\${plan.parent_zone} - \` : '';
