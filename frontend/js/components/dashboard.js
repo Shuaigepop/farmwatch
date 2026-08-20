@@ -141,9 +141,9 @@ export async function renderDashboard(container) {
                          countdown = '<br><span style="color:var(--warning);font-weight:bold;">&#x26A0;&#xFE0F; 今日可采收</span>';
                      } else if (plan.days_left <= 3) {
                          statusColor = 'var(--warning)';
-                         countdown = \`<br><span style="color:var(--warning);font-weight:bold;">&#x26A0;&#xFE0F; \${plan.days_left} 天后采收</span>\`;
+                         countdown = `<br><span style="color:var(--warning);font-weight:bold;">&#x26A0;&#xFE0F; ${plan.days_left} 天后采收</span>`;
                      } else {
-                         countdown = \`<br><span class="text-secondary">剩余 \${plan.days_left} 天</span>\`;
+                         countdown = `<br><span class="text-secondary">剩余 ${plan.days_left} 天</span>`;
                      }
                  }
              } else if (plan.status === 'harvesting') {
@@ -156,23 +156,23 @@ export async function renderDashboard(container) {
                  emoji = '&#x1F6A7;';
              }
              
-             const parentStr = plan.parent_zone ? \`\${plan.parent_zone} - \` : '';
+             const parentStr = plan.parent_zone ? `${plan.parent_zone} - ` : '';
              
-             return \`
-             <div class="glass-panel" style="padding: 1rem; cursor: pointer; border-left: 4px solid \${statusColor};" onclick="openZonePlanModal(\${plan.id})">
+             return `
+             <div class="glass-panel" style="padding: 1rem; cursor: pointer; border-left: 4px solid ${statusColor};" onclick="openZonePlanModal(${plan.id})">
                  <div class="flex justify-between items-center">
-                     <h4 style="margin: 0; font-size: 1.1rem;">\${parentStr}\${plan.zone_name}</h4>
-                     <span style="font-size: 1.2rem;">\${emoji}</span>
+                     <h4 style="margin: 0; font-size: 1.1rem;">${parentStr}${plan.zone_name}</h4>
+                     <span style="font-size: 1.2rem;">${emoji}</span>
                  </div>
                  <div style="margin-top: 0.5rem; font-size: 0.95rem;">
-                     <strong>\${plan.crop_name || '未种植'}</strong>
-                     <div style="color: \${statusColor}; margin-top: 0.2rem;">\${statusText}\${countdown}</div>
+                     <strong>${plan.crop_name || '未种植'}</strong>
+                     <div style="color: ${statusColor}; margin-top: 0.2rem;">${statusText}${countdown}</div>
                  </div>
-                 \${plan.next_crop_name ? \`<div style="margin-top: 0.5rem; font-size: 0.8rem;" class="text-secondary">▶ 下一轮: \${plan.next_crop_name}</div>\` : ''}
+                 ${plan.next_crop_name ? `<div style="margin-top: 0.5rem; font-size: 0.8rem;" class="text-secondary">▶ 下一轮: ${plan.next_crop_name}</div>` : ''}
              </div>
-             \`;
+             `;
           }).join('')}
-          \${zonePlans.length === 0 ? '<p class="text-secondary">没有规划数据。请先建立区域。</p>' : ''}
+          ${zonePlans.length === 0 ? '<p class="text-secondary">没有规划数据。请先建立区域。</p>' : ''}
         </div>
 
         <!-- ZONE PLAN MODAL CONTAINER -->
