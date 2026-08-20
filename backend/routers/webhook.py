@@ -42,10 +42,32 @@ async def process_image_analysis(photo_id: int, target_id: str, file_path: str):
                 photo.ai_analysis = analysis_text
                 photo.health_status = analysis_data.get("status", "pending")
                 photo.analyzed_at = datetime.now(timezone.utc)
+                
+                # Check for planting verification
+                is_planting = analysis_data.get("is_planting_verification", False)
+                planting_status = analysis_data.get("planting_status", None)
+                
+                reply_msg = f"📸 AI 分析完毕 (AI Analysis Complete)\n状况: {photo.health_status}\n建议: {analysis_data.get('notes', '')}"
+                
+                if is_planting:
+                    from models.models import HarvestPlan
+                    pending_plans_res = await session.execute(select(HarvestPlan).where(
+                        HarvestPlan.farm_id == photo.farm_id,
+                        HarvestPlan.status == "pending_verification"
+                    ))
+                    pending_plans = pending_plans_res.scalars().all()
+                    
+                    if pending_plans:
+                        if planting_status == "approved":
+                            for plan in pending_plans:
+                                plan.status = "growing"
+                            reply_msg += "\n\n✅ [种植确认] AI 已确认种植照片！采收倒数正式启动。 (Planting verified! Countdown started.)"
+                        elif planting_status == "flagged":
+                            reply_msg += "\n\n⚠️ [工头确认需求] 照片无法自动确认为合格种植，已通知工头查验。 (Foreman review required for planting.)"
+                
                 await session.commit()
                 print(f"[AI] Photo {photo_id} updated: status={photo.health_status}")
                 
-        reply_msg = f"圖片分析完成！\n狀態：{analysis_data.get('status', '未知')}\n筆記：{analysis_data.get('notes', '')}"
         # Use Push Message instead of Reply Message to avoid timeout
         if target_id:
             line_service.send_text_message(target_id, reply_msg)

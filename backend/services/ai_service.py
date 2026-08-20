@@ -33,17 +33,19 @@ class AIService:
     def _analyze_image_sync(self, image_path: str) -> str:
         img = Image.open(image_path)
         prompt = """
-        【植物病理专家 AI】指令：
-        你是一位专业的农业与植物病理学专家。请分析这张农作物/农场照片。
+        【植物病理专家与农田督导 AI】指令：
+        你是一位专业的农业与植物病理学专家，同时也是一位农田现场监工。请分析这张农作物/农场照片。
         请回传一个包含以下键值的 JSON 字串：
         - "status": 健康状态，必须是 "healthy" (健康), "warning" (轻微问题/需注意), 或 "critical" (严重病害/危急)
         - "notes": 详细诊断结果与具体用药或处置建议（使用繁体中文）
         - "confidence": 信心分数 (0.0 到 1.0)
+        - "is_planting_verification": 布林值 (true/false)。判断这张照片是否像是工人在回报「我刚种好作物」或「刚翻土/理畦完毕」。如果是展示刚种下的苗或刚整理好的土床，请设为 true。
+        - "planting_status": 如果是种植回报照片，状态为 "approved" (确认为真实工作成果), "flagged" (模糊、看不清楚或似乎是空地，需要人工确认)。如果不是种植照片，请设为 null。
         只回传 JSON，不要其他文字。
         """
         def _call():
             response = self.client.models.generate_content(
-                model='gemini-3.5-flash',
+                model='gemini-1.5-flash',
                 contents=[img, prompt],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json"
@@ -69,7 +71,7 @@ class AIService:
         """
         def _call():
             response = self.client.models.generate_content(
-                model='gemini-3.5-flash',
+                model='gemini-1.5-flash',
                 contents=[prompt]
             )
             return response.text
@@ -102,7 +104,7 @@ class AIService:
         """
         def _call():
             response = self.client.models.generate_content(
-                model='gemini-3.5-flash',
+                model='gemini-1.5-flash',
                 contents=[prompt]
             )
             return response.text
@@ -126,7 +128,7 @@ class AIService:
         """
         def _call():
             response = self.client.models.generate_content(
-                model='gemini-3.5-flash',
+                model='gemini-1.5-flash',
                 contents=[prompt],
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json"
@@ -150,7 +152,7 @@ class AIService:
         """
         def _call():
             response = self.client.models.generate_content(
-                model='gemini-3.5-flash',
+                model='gemini-1.5-flash',
                 contents=[prompt]
             )
             return response.text.strip()
@@ -162,7 +164,7 @@ class AIService:
     def _generate_generic_content_sync(self, prompt: str) -> str:
         def _call():
             response = self.client.models.generate_content(
-                model='gemini-3.5-flash',
+                model='gemini-1.5-flash',
                 contents=prompt,
             )
             return response.text

@@ -69,14 +69,65 @@ async def update_task(
         raise HTTPException(status_code=403, detail="Not authorized")
         
     update_data = task_in.model_dump(exclude_unset=True)
+    just_completed = False
     if "status" in update_data and update_data["status"] == "completed" and task.status != "completed":
         task.completed_at = datetime.utcnow()
+        just_completed = True
         
     for key, value in update_data.items():
         setattr(task, key, value)
         
     await db.commit()
     await db.refresh(task)
+    
+    # Check if this was a planting task that just got completed
+    if just_completed and task.zone_id:
+        title_lower = (task.title or "").lower()
+        if "plant" in title_lower or "种植" in title_lower or "種植" in title_lower:
+            # It's a planting task! Let's find if a crop matches
+            # We need to import Crop and HarvestPlan, hopefully they are in models
+            from models.models import Crop, HarvestPlan, FarmZone
+            from datetime import timedelta
+            
+            # Find the farm's crops
+            crops_res = await db.execute(select(Crop).where(Crop.farm_id == task.farm_id))
+            crops = crops_res.scalars().all()
+            
+            matched_crop = None
+            for c in crops:
+                if c.name.lower() in title_lower:
+                    matched_crop = c
+                    break
+            
+            if matched_crop:
+                # Get the zone name for the area_or_zone field
+                zone_res = await db.execute(select(FarmZone).where(FarmZone.id == task.zone_id))
+                zone = zone_res.scalar_one_or_none()
+                zone_name = zone.name if zone else str(task.zone_id)
+                
+                # Check if a pending_verification or growing plan already exists for this crop and zone
+                existing_plan_res = await db.execute(select(HarvestPlan).where(
+                    HarvestPlan.farm_id == task.farm_id,
+                    HarvestPlan.crop_name == matched_crop.name,
+                    HarvestPlan.area_or_zone == zone_name,
+                    HarvestPlan.status.in_(["pending_verification", "growing"])
+                ))
+                existing_plan = existing_plan_res.scalar_one_or_none()
+                
+                if not existing_plan:
+                    # Create a new HarvestPlan in pending_verification status
+                    new_plan = HarvestPlan(
+                        farm_id=task.farm_id,
+                        crop_name=matched_crop.name,
+                        planted_date=datetime.utcnow().date(),
+                        expected_harvest_date=datetime.utcnow().date() + timedelta(days=matched_crop.grow_days),
+                        area_or_zone=zone_name,
+                        status="pending_verification",
+                        notes=f"Auto-generated from planting task #{task.id}"
+                    )
+                    db.add(new_plan)
+                    await db.commit()
+    
     return task
 
 @router.delete("/{task_id}")

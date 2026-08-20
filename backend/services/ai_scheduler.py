@@ -28,7 +28,7 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
     请根据这些状况提供建议，建议农场今天应该执行哪些任务来处理这些病害问题？
     """
     resp1 = ai_service.client.models.generate_content(
-        model='gemini-3.5-flash',
+        model='gemini-1.5-flash',
         contents=[prompt1]
     )
     agent1_suggestion = resp1.text
@@ -46,7 +46,7 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
     请分析是否有极低库存的项目，并建议今天是否需要盘点或采购任务？
     """
     resp2 = ai_service.client.models.generate_content(
-        model='gemini-3.5-flash',
+        model='gemini-1.5-flash',
         contents=[prompt2]
     )
     agent2_suggestion = resp2.text
@@ -59,6 +59,24 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
     pending_tasks = tasks_res.scalars().all()
     task_data = [{"title": t.title, "description": t.description, "zone_id": t.zone_id} for t in pending_tasks]
 
+    # 4. Fetch impending harvest plans
+    # Status is 'growing'. Calculate days until expected_harvest_date.
+    harvest_res = await db.execute(select(models.HarvestPlan).where(
+        models.HarvestPlan.farm_id == farm_id,
+        models.HarvestPlan.status == "growing"
+    ))
+    growing_plans = harvest_res.scalars().all()
+    today_date = datetime.now(timezone.utc).date()
+    impending_harvests = []
+    for plan in growing_plans:
+        days_left = (plan.expected_harvest_date - today_date).days
+        if days_left <= 3: # 3 days or overdue
+            impending_harvests.append({
+                "crop": plan.crop_name,
+                "zone": plan.area_or_zone,
+                "days_left": days_left
+            })
+
     # Agent 3: Coordinator
     prompt3 = f"""
     【农场大管家 AI】
@@ -66,17 +84,18 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
     疾病专家建议：{agent1_suggestion}
     库存专家建议：{agent2_suggestion}
     目前的待办任务：{task_data}
+    即将采收的作物（需要在今天排入采收任务）：{impending_harvests}
     
     请输出一个 JSON 阵列（Array），包含今天要执行的任务列表。
     每个任务必须是一个 JSON 对象，包含以下栏位：
-    - "title": 任务标题
-    - "zone_id": 区域ID（如果有对应，可填整数；若无特定区域可填 null）
+    - "title": 任务标题（若采收，请注明「采收 [作物]」）
+    - "zone_id": 区域ID（如果有对应，可填整数；若无特定区域可填 null。对于采收任务，请尽可能根据提供的信息找出 zone_id 或在标题中注明区域）
     - "description": 任务详细说明
     只回传纯 JSON，不要包含 ```json 标签。
     """
     
     resp3 = ai_service.client.models.generate_content(
-        model='gemini-3.5-flash',
+        model='gemini-1.5-flash',
         contents=[prompt3],
         config=types.GenerateContentConfig(
             response_mime_type="application/json"
