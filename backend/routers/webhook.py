@@ -44,26 +44,31 @@ async def process_image_analysis(photo_id: int, target_id: str, file_path: str):
                 photo.analyzed_at = datetime.now(timezone.utc)
                 
                 # Check for planting verification
+                is_valid = analysis_data.get("is_valid_farm_photo", True)
                 is_planting = analysis_data.get("is_planting_verification", False)
                 planting_status = analysis_data.get("planting_status", None)
                 
-                reply_msg = f"📸 AI 分析完毕 (AI Analysis Complete)\n状况: {photo.health_status}\n建议: {analysis_data.get('notes', '')}"
-                
-                if is_planting:
-                    from models.models import HarvestPlan
-                    pending_plans_res = await session.execute(select(HarvestPlan).where(
-                        HarvestPlan.farm_id == photo.farm_id,
-                        HarvestPlan.status == "pending_verification"
-                    ))
-                    pending_plans = pending_plans_res.scalars().all()
+                if not is_valid:
+                    photo.health_status = "rejected"
+                    reply_msg = f"⚠️ [无效的照片 Invalid Photo] \nAI 判断这并非农场或农作物的相关照片。\nAI Analysis: {analysis_data.get('notes', '无关照片')} \n\n请重新拍摄清晰的农场工作照片。\nPlease take a clear photo of the farm/crops."
+                else:
+                    reply_msg = f"📸 AI 分析完毕 (AI Analysis Complete)\n状况: {photo.health_status}\n建议: {analysis_data.get('notes', '')}"
                     
-                    if pending_plans:
-                        if planting_status == "approved":
-                            for plan in pending_plans:
-                                plan.status = "growing"
-                            reply_msg += "\n\n✅ [种植确认] AI 已确认种植照片！采收倒数正式启动。 (Planting verified! Countdown started.)"
-                        elif planting_status == "flagged":
-                            reply_msg += "\n\n⚠️ [工头确认需求] 照片无法自动确认为合格种植，已通知工头查验。 (Foreman review required for planting.)"
+                    if is_planting:
+                        from models.models import HarvestPlan
+                        pending_plans_res = await session.execute(select(HarvestPlan).where(
+                            HarvestPlan.farm_id == photo.farm_id,
+                            HarvestPlan.status == "pending_verification"
+                        ))
+                        pending_plans = pending_plans_res.scalars().all()
+                        
+                        if pending_plans:
+                            if planting_status == "approved":
+                                for plan in pending_plans:
+                                    plan.status = "growing"
+                                reply_msg += "\n\n✅ [种植确认] AI 已确认种植照片！采收倒数正式启动。 (Planting verified! Countdown started.)"
+                            elif planting_status == "flagged":
+                                reply_msg += "\n\n⚠️ [工头确认需求] 照片无法自动确认为合格种植，已通知工头查验。 (Foreman review required for planting.)"
                 
                 await session.commit()
                 print(f"[AI] Photo {photo_id} updated: status={photo.health_status}")
@@ -131,6 +136,9 @@ async def process_text_intent(text: str, farm_id: int, target_id: str):
                         reply = f"✨ 已建立新庫存：{item_name}，數量 {qty} {data.get('unit', '個')}"
                         
             line_service.send_text_message(target_id, reply)
+        else:
+            line_service.send_text_message(target_id, "🤖 我是农场的 AI 助手。如果您想回报问题，请发送照片；如果是输入出货数据或消耗资材，请遵循正确的菜单格式。闲聊或其他不相关的内容将不被处理哦！")
+
     except Exception as e:
         print(f"[AI ERROR] process_text_intent failed: {e}")
 
