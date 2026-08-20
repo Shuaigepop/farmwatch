@@ -34,6 +34,9 @@ async def force_utf8_charset(request: Request, call_next):
     if "javascript" in content_type or "css" in content_type or "html" in content_type:
         if "charset=" not in content_type.lower():
             response.headers["Content-Type"] = f"{content_type}; charset=utf-8"
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
     return response
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
