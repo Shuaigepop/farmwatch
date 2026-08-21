@@ -94,6 +94,18 @@ async def startup_event():
         # 自动填充所有农场的示范规划数据 (Auto seed demo planning data for all farms)
         await auto_seed_all_farms(session)
 
+        # 针对 PostgreSQL 的线上资料库迁移 (Auto-migration for Render Postgres)
+        try:
+            from sqlalchemy import text
+            await session.execute(text("ALTER TABLE recurring_tasks ADD COLUMN IF NOT EXISTS target_role VARCHAR DEFAULT 'worker';"))
+            await session.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS target_role VARCHAR DEFAULT 'worker';"))
+            await session.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS verified_by INTEGER;"))
+            await session.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP;"))
+            await session.commit()
+            print("Successfully added new columns for Foreman verification.")
+        except Exception as e:
+            print(f"Migration skipped or failed (safe to ignore if SQLite): {e}")
+
 # Include API routers
 app.include_router(auth.router)
 app.include_router(webhook.router)
