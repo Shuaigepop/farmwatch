@@ -143,6 +143,47 @@ export async function renderSettings(container) {
           </div>
         </div>
       </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 2rem; margin-top: 2rem;">
+        <div class="glass-panel" style="padding: 2rem; flex: 1; min-width: 300px;">
+          <h3 class="section-title">SOP / Daily Tasks Management</h3>
+          <p class="text-secondary text-sm" style="margin-bottom: 1rem;">Define recurring daily tasks for workers and foremen. These will automatically appear in the AI scheduler.</p>
+          
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <select id="sop-farm-select" class="form-input" style="width: 100%; padding: 0.8rem; border-radius: var(--radius-sm); border: 1px solid rgba(0,0,0,0.1);">
+              <option value="">Loading...</option>
+            </select>
+          </div>
+          
+          <div id="sop-list-container" style="margin-top: 1rem; max-height: 350px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; background: rgba(255,255,255,0.3);">
+            <div class="text-secondary text-sm text-center" style="padding: 1rem;">Select a farm above</div>
+          </div>
+          
+          <div style="padding: 1.2rem; border-top: 2px solid var(--primary); margin-top: 1rem; background: rgba(45,80,22,0.05); border-radius: 0 0 var(--radius-md) var(--radius-md);">
+            <h4 style="margin-bottom: 0.8rem; color: var(--primary);">&#x2795; Add New SOP Task</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <div>
+                <label class="text-secondary text-sm">Task Title</label>
+                <input type="text" id="new-sop-title" placeholder="e.g. Morning watering" class="form-input" style="width:100%; padding: 0.5rem; border-radius: var(--radius-sm); border: 1px solid rgba(0,0,0,0.1);">
+              </div>
+              <div>
+                <label class="text-secondary text-sm">Assign To</label>
+                <select id="new-sop-role" class="form-input" style="width:100%; padding: 0.5rem; border-radius: var(--radius-sm); border: 1px solid rgba(0,0,0,0.1);">
+                  <option value="worker">Worker</option>
+                  <option value="foreman">Foreman</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 0.5rem;">
+              <label class="text-secondary text-sm">Description</label>
+              <input type="text" id="new-sop-desc" placeholder="Detailed instructions" class="form-input" style="width:100%; padding: 0.5rem; border-radius: var(--radius-sm); border: 1px solid rgba(0,0,0,0.1);">
+            </div>
+            <button class="btn btn-primary" id="add-sop-btn" style="width: 100%; padding: 0.6rem; background: var(--primary); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;" disabled>
+              Add SOP Task
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 
@@ -151,6 +192,7 @@ export async function renderSettings(container) {
   await loadLineGroups();
   await initZoneManagement();
   await initCropManagement();
+  await initSOPManagement();
 
   document.getElementById('create-farm-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -678,3 +720,126 @@ async function loadCrops(farmId) {
     container.innerHTML = '<div class="text-danger text-sm text-center" style="padding: 1rem;">载入作物失败</div>';
   }
 }
+
+async function initSOPManagement() {
+  var select = document.getElementById('sop-farm-select');
+  var btn = document.getElementById('add-sop-btn');
+  if (!select) return;
+  
+  try {
+    var farms = await api.farms.list();
+    if (!farms || farms.length === 0) {
+      select.innerHTML = '<option value="">(No farms)</option>';
+      return;
+    }
+    
+    select.innerHTML = '<option value="">Select farm to manage SOPs...</option>' + 
+      farms.map(function(f) { return '<option value="' + f.id + '">' + f.name + '</option>'; }).join('');
+      
+    select.addEventListener('change', async function(e) {
+      var farmId = e.target.value;
+      btn.disabled = !farmId;
+      if (farmId) {
+        await loadSOPs(farmId);
+      } else {
+        document.getElementById('sop-list-container').innerHTML = '<div class="text-secondary text-sm text-center" style="padding: 1rem;">Select a farm above</div>';
+      }
+    });
+    
+    btn.addEventListener('click', async function() {
+      var farmId = select.value;
+      var title = document.getElementById('new-sop-title').value.trim();
+      var desc = document.getElementById('new-sop-desc').value.trim();
+      var role = document.getElementById('new-sop-role').value;
+      
+      if (!title) { showToast('Please enter a task title', 'error'); return; }
+      
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+      try {
+        var token = localStorage.getItem('fw_token');
+        var resp = await fetch('/api/tasks/recurring', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({
+            farm_id: parseInt(farmId),
+            title: title,
+            description: desc || title,
+            target_role: role,
+            cron_expression: '0 6 * * *',
+            is_active: true
+          })
+        });
+        if (!resp.ok) throw new Error('Failed');
+        showToast('SOP task created!', 'success');
+        document.getElementById('new-sop-title').value = '';
+        document.getElementById('new-sop-desc').value = '';
+        await loadSOPs(farmId);
+      } catch (err) {
+        showToast('Failed to create SOP', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Add SOP Task';
+      }
+    });
+  } catch (err) {
+    select.innerHTML = '<option value="">Load failed</option>';
+  }
+}
+
+async function loadSOPs(farmId) {
+  var container = document.getElementById('sop-list-container');
+  container.innerHTML = '<div class="text-center text-sm" style="padding: 1rem;">Loading...</div>';
+  
+  try {
+    var token = localStorage.getItem('fw_token');
+    var resp = await fetch('/api/tasks/recurring?farm_id=' + farmId, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!resp.ok) throw new Error('Failed');
+    var sops = await resp.json();
+    
+    if (!sops || sops.length === 0) {
+      container.innerHTML = '<div class="text-secondary text-sm text-center" style="padding: 1rem;">No SOP tasks defined for this farm.</div>';
+      return;
+    }
+    
+    var html = '';
+    sops.forEach(function(s) {
+      var roleLabel = s.target_role === 'foreman' ? '<span class="badge" style="background:#8b5cf6;color:white;font-size:0.7rem;">FOREMAN</span>' : '<span class="badge badge-info" style="font-size:0.7rem;">WORKER</span>';
+      var activeLabel = s.is_active ? '<span style="color:var(--primary);">Active</span>' : '<span style="color:var(--danger);">Inactive</span>';
+      html += '<div style="display: flex; justify-content: space-between; align-items: center; padding: 0.8rem; border-bottom: 1px solid var(--border-color);">';
+      html += '<div>';
+      html += '<div style="font-weight:600;">' + roleLabel + ' ' + s.title + '</div>';
+      html += '<div class="text-secondary text-sm">' + (s.description || '') + '</div>';
+      html += '<div class="text-secondary text-sm">' + activeLabel + '</div>';
+      html += '</div>';
+      html += '<button class="icon-btn delete-sop-btn" data-id="' + s.id + '" style="color: var(--danger);" title="Delete">&#x1F5D1;&#xFE0F;</button>';
+      html += '</div>';
+    });
+    
+    container.innerHTML = html;
+    
+    document.querySelectorAll('.delete-sop-btn').forEach(function(btn) {
+      btn.addEventListener('click', async function(e) {
+        var sopId = e.currentTarget.dataset.id;
+        if (!confirm('Delete this SOP task?')) return;
+        try {
+          var token = localStorage.getItem('fw_token');
+          var resp = await fetch('/api/tasks/recurring/' + sopId, {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          if (!resp.ok) throw new Error('Failed');
+          showToast('SOP task deleted', 'success');
+          await loadSOPs(farmId);
+        } catch (err) {
+          showToast('Delete failed', 'error');
+        }
+      });
+    });
+  } catch (err) {
+    container.innerHTML = '<div class="text-danger text-sm text-center" style="padding: 1rem;">Failed to load SOPs</div>';
+  }
+}
+

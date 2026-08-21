@@ -59,9 +59,10 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
         ))
         for sop in sops_res.scalars().all():
             raw_tasks.append({
-                "title": f"[日常] {sop.title}",
+                "title": f"[daily] {sop.title}",
                 "zone_id": sop.zone_id,
-                "description": sop.description
+                "description": sop.description,
+                "target_role": sop.target_role or "worker"
             })
 
         # 2. Fetch Fertilizer Schedules for current month
@@ -73,7 +74,8 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
             raw_tasks.append({
                 "title": "[施肥] 本月排程",
                 "zone_id": None,
-                "description": f"施放 {fert.fertilizer_name}, 数量: {fert.quantity} {fert.unit}"
+                "description": f"施放 {fert.fertilizer_name}, 数量: {fert.quantity} {fert.unit}",
+                "target_role": "worker"
             })
 
         # 3. Fetch ZoneCropPlans
@@ -87,13 +89,15 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
                     raw_tasks.append({
                         "title": f"[采收预警] {plan.crop_name}",
                         "zone_id": plan.zone_id,
-                        "description": f"还有 {days_left} 天采收, 请准备采收工具"
+                        "description": f"还有 {days_left} 天采收, 请准备采收工具",
+                        "target_role": "worker"
                     })
                 elif days_left <= 0:
                     raw_tasks.append({
                         "title": f"[今日采收] {plan.crop_name}",
                         "zone_id": plan.zone_id,
-                        "description": "已经可以采收！"
+                        "description": "已经可以采收！",
+                        "target_role": "worker"
                     })
             elif plan.status == "harvesting" and plan.harvest_end_date:
                 days_over = (today_date - plan.harvest_end_date).days
@@ -101,14 +105,16 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
                     raw_tasks.append({
                         "title": f"[采收结束] {plan.crop_name}",
                         "zone_id": plan.zone_id,
-                        "description": "采收期已结束, 请清理残株并准备翻土"
+                        "description": "采收期已结束, 请清理残株并准备翻土",
+                        "target_role": "worker"
                     })
             elif plan.status == "preparing":
                 next_crop = f" (准备种: {plan.next_crop_name})" if plan.next_crop_name else ""
                 raw_tasks.append({
                     "title": f"[翻土准备]",
                     "zone_id": plan.zone_id,
-                    "description": f"执行翻土、施底肥、消毒作业{next_crop}"
+                    "description": f"执行翻土、施底肥、消毒作业{next_crop}",
+                    "target_role": "worker"
                 })
 
         # 4. Fetch Inventory Alerts
@@ -120,7 +126,8 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
                 raw_tasks.append({
                     "title": f"[库存警告] {item.name}",
                     "zone_id": None,
-                    "description": f"库存偏低 ({item.quantity} {item.unit}), 请尽快盘点或采购"
+                    "description": f"库存偏低 ({item.quantity} {item.unit}), 请尽快盘点或采购",
+                    "target_role": "worker"
                 })
 
         # 5. Fetch Photo Issues
@@ -134,7 +141,8 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
             raw_tasks.append({
                 "title": "[异常处理]",
                 "zone_id": p.zone_id,
-                "description": f"发现异常: {p.ai_analysis[:20]}..."
+                "description": f"发现异常: {p.ai_analysis[:20]}...",
+                "target_role": "worker"
             })
 
         print(f"[AI Scheduler] Farm {farm_id}: Gathered {len(raw_tasks)} rule-based tasks")
@@ -144,8 +152,17 @@ async def generate_daily_schedule(farm_id: int, db: AsyncSession):
             raw_tasks.append({
                 "title": "[日常巡检]",
                 "zone_id": None,
-                "description": "全区巡视，检查是否有虫害或缺水状况"
+                "description": "全区巡视，检查是否有虫害或缺水状况",
+                "target_role": "worker"
             })
+
+        # Always add default foreman tasks
+        raw_tasks.append({
+            "title": "[Foreman] Patrol & Photo Verification",
+            "zone_id": None,
+            "description": "Patrol all zones, take photos, verify worker progress",
+            "target_role": "foreman"
+        })
 
         print(f"[AI Scheduler] Parsed {len(raw_tasks)} tasks successfully (Deterministic)")
         

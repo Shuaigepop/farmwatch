@@ -50,9 +50,33 @@ async def process_image_analysis(photo_id: int, target_id: str, file_path: str):
                 
                 if not is_valid:
                     photo.health_status = "rejected"
-                    reply_msg = f"⚠️ [无效的照片 Invalid Photo] \nAI 判断这并非农场或农作物的相关照片。\nAI Analysis: {analysis_data.get('notes', '无关照片')} \n\n请重新拍摄清晰的农场工作照片。\nPlease take a clear photo of the farm/crops."
+                    reply_msg = "\u26a0\ufe0f [Invalid Photo]\nAI determined this is not a farm-related photo.\nPlease take a clear photo of the farm/crops."
                 else:
-                    reply_msg = f"📸 AI 分析完毕 (AI Analysis Complete)\n状况: {photo.health_status}\n建议: {analysis_data.get('notes', '')}"
+                    reply_msg = "\U0001f4f8 AI Analysis Complete\nStatus: " + str(photo.health_status) + "\nNotes: " + str(analysis_data.get('notes', ''))
+                    
+                    # Check if this is a foreman verification photo
+                    is_verification = analysis_data.get("is_task_verification", False)
+                    verified_zone_id = analysis_data.get("verified_zone_id", None)
+                    
+                    if is_verification and photo.farm_id:
+                        from models.models import Task
+                        pending_q = select(Task).where(
+                            Task.farm_id == photo.farm_id,
+                            Task.status.in_(["pending", "in_progress"]),
+                            Task.target_role == "worker"
+                        )
+                        if verified_zone_id:
+                            pending_q = pending_q.where(Task.zone_id == verified_zone_id)
+                        pending_res = await session.execute(pending_q)
+                        pending_tasks = pending_res.scalars().all()
+                        
+                        if pending_tasks:
+                            completed_names = []
+                            for pt in pending_tasks:
+                                pt.status = "completed"
+                                pt.completed_at = datetime.now(timezone.utc)
+                                completed_names.append(pt.title)
+                            reply_msg += "\n\n\u2705 [Foreman Verified] " + str(len(completed_names)) + " tasks marked complete:\n" + "\n".join(completed_names)
                     
                     if is_planting:
                         from models.models import HarvestPlan
@@ -137,7 +161,7 @@ async def process_text_intent(text: str, farm_id: int, target_id: str):
                         
             line_service.send_text_message(target_id, reply)
         else:
-            line_service.send_text_message(target_id, "🤖 我是农场的 AI 助手。如果您想回报问题，请发送照片；如果是输入出货数据或消耗资材，请遵循正确的菜单格式。闲聊或其他不相关的内容将不被处理哦！")
+            line_service.send_text_message(target_id, "\U0001f916 [System] This farm requires PHOTO proof for work reports!\nPlease send a photo to record progress. Text chat will not be recorded.\n\n\U0001f916 [\u7cfb\u7edf] \u519c\u573a\u4e0d\u63a5\u53d7\u7eaf\u6587\u5b57\u5de5\u4f5c\u6c47\u62a5\uff01\u8bf7\u62cd\u7167\u4e0a\u4f20\u8bb0\u5f55\u5de5\u4f5c\u8fdb\u5ea6\u3002")
 
     except Exception as e:
         print(f"[AI ERROR] process_text_intent failed: {e}")

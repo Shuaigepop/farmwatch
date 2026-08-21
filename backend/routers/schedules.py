@@ -17,6 +17,7 @@ class ApprovedTask(BaseModel):
     title: str
     zone_id: Optional[int] = None
     description: str
+    target_role: str = 'worker'
 
 class ApproveRequest(BaseModel):
     tasks: List[ApprovedTask]
@@ -72,16 +73,64 @@ async def approve_schedule(farm_id: int, req: ApproveRequest, db: AsyncSession =
             title=t.title,
             description=t.description,
             stage="general",
-            status="pending"
+            status="pending",
+            target_role=t.target_role if hasattr(t, 'target_role') else 'worker'
         )
         db.add(new_task)
     
     await db.commit()
     
+    worker_tasks = []
+    foreman_tasks = []
+    for t in req.tasks:
+        target_role = t.target_role if hasattr(t, 'target_role') else 'worker'
+        if target_role == 'foreman':
+            foreman_tasks.append(t.title)
+        else:
+            worker_tasks.append(t.title)
+
     # Send notification to LINE
     task_msgs = []
-    for i, t in enumerate(req.tasks):
-        task_msgs.append(f"{i+1}. {t.title}")
+    task_msgs.append("[Worker Tasks]")
+    for i, title in enumerate(worker_tasks):
+        task_msgs.append(f"{i+1}. {title}")
+        
+    task_msgs.append("")
+    task_msgs.append("[Foreman Tasks]")
+    for i, title in enumerate(foreman_tasks):
+        task_msgs.append(f"{i+1}. {title}")
+
+    try:
+        from services.ai_service import ai_service
+        if worker_tasks:
+            translations_str = await ai_service.translate_tasks(worker_tasks)
+            translations_str = translations_str.strip()
+            if translations_str.startswith("```json"):
+                translations_str = translations_str[7:]
+            elif translations_str.startswith("```"):
+                translations_str = translations_str[3:]
+            if translations_str.endswith("```"):
+                translations_str = translations_str[:-3]
+            translations = json.loads(translations_str.strip())
+            
+            task_msgs.append("")
+            task_msgs.append("[ID] Tugas Pekerja:")
+            for i, tr in enumerate(translations):
+                task_msgs.append(f"{i+1}. {tr.get('id', '')}")
+                
+            task_msgs.append("")
+            task_msgs.append("[MS] Tugasan Pekerja:")
+            for i, tr in enumerate(translations):
+                task_msgs.append(f"{i+1}. {tr.get('ms', '')}")
+                
+            task_msgs.append("")
+            task_msgs.append("[MM] Burmese:")
+            for i, tr in enumerate(translations):
+                task_msgs.append(f"{i+1}. {tr.get('mm', '')}")
+
+    except Exception as e:
+        print(f"Translation failed: {e}")
+
     msg_text = "今日AI派发任务已核准：\n" + "\n".join(task_msgs)
     
     # Find group ID for this farm

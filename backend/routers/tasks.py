@@ -4,7 +4,7 @@ from sqlalchemy import select
 from typing import List, Optional
 
 from database import AsyncSessionLocal
-from models.models import Task, User
+from models.models import Task, User, RecurringTask
 from schemas import TaskCreate, TaskUpdate, TaskResponse
 from deps import get_db, get_current_user, require_role
 from datetime import datetime
@@ -142,6 +142,52 @@ async def delete_task(
     
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
+        
+    await db.delete(task)
+    await db.commit()
+    return {"status": "success"}
+
+from pydantic import BaseModel
+
+class RecurringTaskCreate(BaseModel):
+    farm_id: int
+    zone_id: Optional[int] = None
+    title: str
+    description: str
+    cron_expression: str = '0 6 * * *'
+    target_role: str = 'worker'
+    is_active: bool = True
+
+@router.get("/recurring")
+async def list_recurring_tasks(
+    farm_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(RecurringTask).where(RecurringTask.farm_id == farm_id))
+    return result.scalars().all()
+
+@router.post("/recurring")
+async def create_recurring_task(
+    task_in: RecurringTaskCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role(["boss", "supervisor"]))
+):
+    new_task = RecurringTask(**task_in.model_dump())
+    db.add(new_task)
+    await db.commit()
+    await db.refresh(new_task)
+    return new_task
+
+@router.delete("/recurring/{task_id}")
+async def delete_recurring_task(
+    task_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role(["boss"]))
+):
+    result = await db.execute(select(RecurringTask).where(RecurringTask.id == task_id))
+    task = result.scalar_one_or_none()
+    if not task:
+        raise HTTPException(status_code=404, detail="Recurring task not found")
         
     await db.delete(task)
     await db.commit()

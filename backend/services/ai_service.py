@@ -33,16 +33,17 @@ class AIService:
     def _analyze_image_sync(self, image_path: str) -> str:
         img = Image.open(image_path)
         prompt = """
-        【植物病理专家与农田督导 AI】指令：
-        你是一位专业的农业与植物病理学专家，同时也是一位农田现场监工。请分析这张农作物/农场照片。
-        请回传一个包含以下键值的 JSON 字串：
-        - "is_valid_farm_photo": 布林值 (true/false)。判断这张照片是否是一张与农场、农作物、农业设施或农业工作相关的照片。如果是一张完全无关的照片（例如电脑萤幕、自拍照、风景照、鞋子等无关物品），请设为 false，并且其他栏位可以直接给予预设值。
-        - "status": 健康状态，必须是 "healthy" (健康), "warning" (轻微问题/需注意), 或 "critical" (严重病害/危急)
-        - "notes": 详细诊断结果与具体用药或处置建议（使用繁体中文）。如果是无关照片，请在此说明「这是一张无关的照片」。
-        - "confidence": 信心分数 (0.0 到 1.0)
-        - "is_planting_verification": 布林值 (true/false)。判断这张照片是否像是工人在回报「我刚种好作物」或「刚翻土/理畦完毕」。如果是展示刚种下的苗或刚整理好的土床，请设为 true。
-        - "planting_status": 如果是种植回报照片，状态为 "approved" (确认为真实工作成果), "flagged" (模糊、看不清楚或似乎是空地，需要人工确认)。如果不是种植照片，请设为 null。
-        只回传 JSON，不要其他文字。
+        You are a professional agricultural and plant pathology expert, and also a farm field supervisor AI.
+        Analyze this farm/agriculture photo and return a JSON object with these keys:
+        - "is_valid_farm_photo": boolean. true if the photo is related to farming (crops, tools, equipment, weeds, pests, dead animals, fences, greenhouses, fertilizer receipts, harvest scenes, workers in field, etc). false ONLY for clearly unrelated photos (computer screens, selfies, indoor furniture, random objects).
+        - "status": health status, must be "healthy", "warning", or "critical"
+        - "notes": detailed diagnosis and recommendations (in Chinese).
+        - "confidence": confidence score (0.0 to 1.0)
+        - "is_planting_verification": boolean. true if the photo shows freshly planted seedlings or prepared soil beds.
+        - "planting_status": "approved" if confirmed real planting work, "flagged" if unclear, null if not a planting photo.
+        - "is_task_verification": boolean. true if the photo appears to show completed farm work (e.g. weeded area, harvested field, cleaned zone, organized tools, finished spraying). This is used for foreman verification.
+        - "verified_zone_id": integer or null. If you can identify a zone marker or label in the photo, extract the zone number. Otherwise null.
+        Return ONLY valid JSON, no other text.
         """
         def _call():
             response = self.client.models.generate_content(
@@ -173,5 +174,27 @@ class AIService:
 
     async def generate_generic_content(self, prompt: str) -> str:
         return await asyncio.to_thread(self._generate_generic_content_sync, prompt)
+
+    def _translate_tasks_sync(self, tasks: list) -> str:
+        prompt = f"""
+        You are a PURE TRANSLATOR. You must translate EXACTLY the tasks given, nothing more, nothing less.
+        Output JSON array where each element has: zh (original), id (Indonesian), ms (Malay), mm (Burmese).
+        You must NOT add, remove, merge, or modify any tasks.
+        
+        Tasks: {json.dumps(tasks, ensure_ascii=False)}
+        """
+        def _call():
+            response = self.client.models.generate_content(
+                model='gemini-3.5-flash',
+                contents=[prompt],
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json"
+                )
+            )
+            return response.text
+        return self._retry_with_backoff(_call)
+
+    async def translate_tasks(self, tasks: list) -> str:
+        return await asyncio.to_thread(self._translate_tasks_sync, tasks)
 
 ai_service = AIService()
