@@ -1,0 +1,43 @@
+Line 75: '          <h3 class="section-title" style="margin-bottom: 1rem;">所有农场 (All Farms)</h3>\n'
+Line 83: '                <p class="text-secondary text-sm" style="margin-bottom: 1rem;">📍 ${farm.location || \'未设定\'}</p>\n'
+Line 85: "                  <span>💬 ${fMessages.length} ${t('nav.messages') || '讯息'}</span>\n"
+Line 86: "                  <span>📸 ${fPhotos.length} ${t('nav.photoWall') || '照片'}</span>\n"
+Line 126: '        <h3 class="section-title" style="margin-bottom: 1rem;">🌾 全农场作物规划图 (Farm Planning Map)</h3>\n'
+Line 130: "             let statusText = '空置 (Idle)';\n"
+Line 132: "             let emoji = '⚪';\n"
+Line 136: "                 statusText = '生长中 (Growing)';\n"
+Line 137: "                 emoji = '🌿';\n"
+Line 141: '                         countdown = \'<br><span style="color:var(--warning);font-weight:bold;">⚠️ 今日可采收</span>\';\n'
+Line 144: '                         countdown = \\`<br><span style="color:var(--warning);font-weight:bold;">⚠️ \\${plan.days_left} 天后采收</span>\\`;\n'
+Line 146: '                         countdown = \\`<br><span class="text-secondary">剩余 \\${plan.days_left} 天</span>\\`;\n'
+Line 151: "                 statusText = '采收期 (Harvesting)';\n"
+Line 152: "                 emoji = '🍎';\n"
+Line 155: "                 statusText = '翻土重种 (Preparing)';\n"
+Line 156: "                 emoji = '🚧';\n"
+Line 168: "                     <strong>\\${plan.crop_name || '未种植'}</strong>\n"
+Line 171: '                 \\${plan.next_crop_name ? \\`<div style="margin-top: 0.5rem; font-size: 0.8rem;" class="text-secondary">▶ 下一轮: \\${plan.next_crop_name}</div>\\` : \'\'}\n'
+Line 175: '          \\${zonePlans.length === 0 ? \'<p class="text-secondary">没有规划数据。请先建立区域。</p>\' : \'\'}\n'
+Line 184: '            <div class="stat-icon stat-green">🌾</div>\n'
+Line 191: '            <div class="stat-icon stat-blue">💬</div>\n'
+Line 198: '            <div class="stat-icon stat-amber">📸</div>\n'
+Line 205: '            <div class="stat-icon stat-purple">📋</div>\n'
+Line 252: '                    <h3 style="margin:0;">\\${plan.parent_zone ? plan.parent_zone + \' - \' : \'\'}\\${plan.zone_name} 规划详情</h3>\n'
+Line 253: '                    <button class="icon-btn" onclick="document.getElementById(\'zone-plan-modal\').style.display=\'none\'">❌</button>\n'
+Line 257: '                    <label>状态 (Status)</label>\n'
+Line 259: '                        <option value="idle" \\${plan.status === \'idle\' ? \'selected\' : \'\'}>空置 (Idle)</option>\n'
+Line 260: '                        <option value="planted" \\${plan.status === \'planted\' || plan.status === \'growing\' ? \'selected\' : \'\'}>生长中 (Planted/Growing)</option>\n'
+Line 261: '                        <option value="harvesting" \\${plan.status === \'harvesting\' ? \'selected\' : \'\'}>采收期 (Harvesting)</option>\n'
+Line 262: '                        <option value="preparing" \\${plan.status === \'preparing\' ? \'selected\' : \'\'}>翻土重种 (Preparing)</option>\n'
+Line 267: '                    <label>当前作物 (Current Crop)</label>\n'
+Line 269: '                        <option value="">-- 选择作物 --</option>\n'
+Line 275: '                    <label>种植日期 (Planted Date)</label>\n'
+Line 280: '                    <label>下一轮轮作 (Next Crop)</label>\n'
+Line 281: '                    <input type="text" id="zp-next" class="form-control" value="\\${plan.next_crop_name || \'\'}" placeholder="例如: 黄瓜">\n'
+Line 285: '                    <label>历史采收记录 (Last Harvest kg)</label>\n'
+Line 290: '                    <button class="btn btn-primary" style="flex:1;" onclick="saveZonePlan(\\${plan.id})">保存设定 (Save)</button>\n'
+Line 291: '                    \\${plan.status === \'growing\' ? \\`<button class="btn btn-warning" style="flex:1;" onclick="actionZonePlan(\\${plan.id}, \'harvest\')">▶ 开始采收</button>\\` : \'\'}\n'
+Line 292: '                    \\${plan.status === \'harvesting\' ? \\`<button class="btn btn-secondary" style="flex:1; background:#8b5cf6;" onclick="actionZonePlan(\\${plan.id}, \'finish\')">▶ 采收结束 (去翻土)</button>\\` : \'\'}\n'
+Line 293: '                    \\${plan.status === \'preparing\' ? \\`<button class="btn btn-danger" style="flex:1;" onclick="actionZonePlan(\\${plan.id}, \'clear\')">▶ 清空区域</button>\\` : \'\'}\n'
+Line 316: '              alert("必须选择作物和种植日期");\n'
+Line 346: '              alert("保存失败");\n'
+Line 356: '              alert("操作失败");\n'

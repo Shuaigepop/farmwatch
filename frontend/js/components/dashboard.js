@@ -2,6 +2,88 @@ import { t, getCurrentLanguage } from '../i18n.js';
 import { auth } from '../auth.js';
 import { api, apiFetch } from '../api.js';
 
+function buildCropOption(c, selectedId) {
+  var sel = (selectedId === c.id) ? ' selected' : '';
+  return '<option value="' + c.id + '"' + sel + '>' + c.name + '</option>';
+}
+
+function buildStatusOption(value, label, currentStatus) {
+  var match = false;
+  if (value === 'planted') {
+    match = (currentStatus === 'planted' || currentStatus === 'growing');
+  } else {
+    match = (currentStatus === value);
+  }
+  var sel = match ? ' selected' : '';
+  return '<option value="' + value + '"' + sel + '>' + label + '</option>';
+}
+
+function buildActionButtons(plan) {
+  var html = '';
+  if (plan.status === 'growing') {
+    html += '<button class="btn btn-warning" style="flex:1;" onclick="actionZonePlan(' + plan.id + ', \'harvest\')">&#x25B6; Start Harvest</button>';
+  }
+  if (plan.status === 'harvesting') {
+    html += '<button class="btn btn-secondary" style="flex:1; background:#8b5cf6;" onclick="actionZonePlan(' + plan.id + ', \'finish\')">&#x25B6; End Harvest</button>';
+  }
+  if (plan.status === 'preparing') {
+    html += '<button class="btn btn-danger" style="flex:1;" onclick="actionZonePlan(' + plan.id + ', \'clear\')">&#x25B6; Clear Zone</button>';
+  }
+  return html;
+}
+
+function buildModalHtml(plan, cropOptionsHtml) {
+  var titlePrefix = plan.parent_zone ? (plan.parent_zone + ' - ') : '';
+  var nextVal = plan.next_crop_name || '';
+  var kgVal = plan.last_harvest_kg || '';
+  var dateVal = plan.planted_date || '';
+
+  var html = '<div class="glass-panel" style="background: var(--bg-primary); padding: 2rem; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">';
+  html += '<div class="flex justify-between items-center" style="margin-bottom: 1.5rem;">';
+  html += '<h3 style="margin:0;">' + titlePrefix + plan.zone_name + ' Details</h3>';
+  html += '<button class="icon-btn" onclick="document.getElementById(\'zone-plan-modal\').style.display=\'none\'">&#x274C;</button>';
+  html += '</div>';
+
+  html += '<div class="form-group">';
+  html += '<label>Status</label>';
+  html += '<select id="zp-status" class="form-control">';
+  html += buildStatusOption('idle', 'Idle', plan.status);
+  html += buildStatusOption('planted', 'Growing', plan.status);
+  html += buildStatusOption('harvesting', 'Harvesting', plan.status);
+  html += buildStatusOption('preparing', 'Preparing', plan.status);
+  html += '</select></div>';
+
+  html += '<div class="form-group">';
+  html += '<label>Current Crop</label>';
+  html += '<select id="zp-crop" class="form-control">';
+  html += '<option value="">-- Select Crop --</option>';
+  html += cropOptionsHtml;
+  html += '</select></div>';
+
+  html += '<div class="form-group">';
+  html += '<label>Planted Date</label>';
+  html += '<input type="date" id="zp-date" class="form-control" value="' + dateVal + '">';
+  html += '</div>';
+
+  html += '<div class="form-group">';
+  html += '<label>Next Crop</label>';
+  html += '<input type="text" id="zp-next" class="form-control" value="' + nextVal + '" placeholder="e.g. Cucumber">';
+  html += '</div>';
+
+  html += '<div class="form-group">';
+  html += '<label>Last Harvest (kg)</label>';
+  html += '<input type="number" step="0.1" id="zp-kg" class="form-control" value="' + kgVal + '">';
+  html += '</div>';
+
+  html += '<div style="margin-top: 2rem; display: flex; gap: 1rem;">';
+  html += '<button class="btn btn-primary" style="flex:1;" onclick="saveZonePlan(' + plan.id + ')">Save</button>';
+  html += buildActionButtons(plan);
+  html += '</div>';
+
+  html += '</div>';
+  return html;
+}
+
 export async function renderDashboard(container) {
   const user = auth.getUser();
   const dateStr = new Intl.DateTimeFormat(getCurrentLanguage(), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(new Date());
@@ -44,7 +126,7 @@ export async function renderDashboard(container) {
     let crops = [];
     if (params.farm_id) {
         try {
-            zonePlans = await apiFetch(`/farms/${params.farm_id}/zone-plans`);
+            zonePlans = await apiFetch('/farms/' + params.farm_id + '/zone-plans');
             crops = await api.farms.listCrops(params.farm_id);
         } catch(e) { console.error("Error loading zone plans", e); }
     }
@@ -72,7 +154,7 @@ export async function renderDashboard(container) {
             </div>
           </div>
           
-          <h3 class="section-title" style="margin-bottom: 1rem;">所有农场 (All Farms)</h3>
+          <h3 class="section-title" style="margin-bottom: 1rem;">All Farms</h3>
           <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;">
             ${farms.map(farm => {
               const fMessages = messages.filter(m => m.farm_id === farm.id);
@@ -80,10 +162,10 @@ export async function renderDashboard(container) {
               return `
               <div class="glass-panel farm-card" data-farm-id="${farm.id}" style="padding: 1.5rem; cursor: pointer; transition: transform 0.2s;">
                 <h4 style="font-size: 1.25rem; margin-bottom: 0.5rem; color: var(--primary);">${farm.name}</h4>
-                <p class="text-secondary text-sm" style="margin-bottom: 1rem;">📍 ${farm.location || '未设定'}</p>
+                <p class="text-secondary text-sm" style="margin-bottom: 1rem;">&#x1F4CD; ${farm.location || 'N/A'}</p>
                 <div class="flex justify-between text-sm">
-                  <span>💬 ${fMessages.length} ${t('nav.messages') || '讯息'}</span>
-                  <span>📸 ${fPhotos.length} ${t('nav.photoWall') || '照片'}</span>
+                  <span>&#x1F4AC; ${fMessages.length} ${t('nav.messages') || 'Messages'}</span>
+                  <span>&#x1F4F8; ${fPhotos.length} ${t('nav.photoWall') || 'Photos'}</span>
                 </div>
               </div>
               `;
@@ -113,6 +195,93 @@ export async function renderDashboard(container) {
 
     } else {
       // DETAIL VIEW FOR SINGLE FARM
+      // Build zone plan cards HTML
+      var zonePlanCardsHtml = '';
+      zonePlans.forEach(function(plan) {
+          var statusColor = 'var(--text-secondary)';
+          var statusText = 'Idle';
+          var countdown = '';
+          var emoji = '&#x26AA;';
+
+          if (plan.status === 'planted' || plan.status === 'growing') {
+              statusColor = 'var(--primary)';
+              statusText = 'Growing';
+              emoji = '&#x1F33F;';
+              if (plan.days_left !== null) {
+                  if (plan.days_left <= 0) {
+                      statusColor = 'var(--warning)';
+                      countdown = '<br><span style="color:var(--warning);font-weight:bold;">&#x26A0;&#xFE0F; Ready to harvest!</span>';
+                  } else if (plan.days_left <= 3) {
+                      statusColor = 'var(--warning)';
+                      countdown = '<br><span style="color:var(--warning);font-weight:bold;">&#x26A0;&#xFE0F; ' + plan.days_left + ' days to harvest</span>';
+                  } else {
+                      countdown = '<br><span class="text-secondary">' + plan.days_left + ' days left</span>';
+                  }
+              }
+          } else if (plan.status === 'harvesting') {
+              statusColor = '#d97706';
+              statusText = 'Harvesting';
+              emoji = '&#x1F34E;';
+          } else if (plan.status === 'preparing') {
+              statusColor = '#8b5cf6';
+              statusText = 'Preparing';
+              emoji = '&#x1F6A7;';
+          }
+
+          var parentStr = plan.parent_zone ? (plan.parent_zone + ' - ') : '';
+          var nextCropHtml = '';
+          if (plan.next_crop_name) {
+              nextCropHtml = '<div style="margin-top: 0.5rem; font-size: 0.8rem;" class="text-secondary">&#x25B6; Next: ' + plan.next_crop_name + '</div>';
+          }
+
+          zonePlanCardsHtml += '<div class="glass-panel" style="padding: 1rem; cursor: pointer; border-left: 4px solid ' + statusColor + ';" onclick="openZonePlanModal(' + plan.id + ')">';
+          zonePlanCardsHtml += '<div class="flex justify-between items-center">';
+          zonePlanCardsHtml += '<h4 style="margin: 0; font-size: 1.1rem;">' + parentStr + plan.zone_name + '</h4>';
+          zonePlanCardsHtml += '<span style="font-size: 1.2rem;">' + emoji + '</span>';
+          zonePlanCardsHtml += '</div>';
+          zonePlanCardsHtml += '<div style="margin-top: 0.5rem; font-size: 0.95rem;">';
+          zonePlanCardsHtml += '<strong>' + (plan.crop_name || 'Not planted') + '</strong>';
+          zonePlanCardsHtml += '<div style="color: ' + statusColor + '; margin-top: 0.2rem;">' + statusText + countdown + '</div>';
+          zonePlanCardsHtml += '</div>';
+          zonePlanCardsHtml += nextCropHtml;
+          zonePlanCardsHtml += '</div>';
+      });
+
+      if (zonePlans.length === 0) {
+          zonePlanCardsHtml = '<p class="text-secondary">No planning data. Please create zones first.</p>';
+      }
+
+      // Build recent messages HTML
+      var recentMsgHtml = '';
+      if (recentMessages.length) {
+          recentMessages.forEach(function(msg) {
+              var borderColor = msg.is_reply ? 'var(--primary)' : 'var(--warning)';
+              var bgColor = msg.is_reply ? 'rgba(45,80,22,0.05)' : 'rgba(245,127,23,0.05)';
+              var userName = msg.line_user_name || 'System';
+              var farmName = farmMap[msg.farm_id] || 'Unknown Farm';
+              var content = msg.message_type === 'image' ? '[Photo]' : (msg.content || '[Empty]');
+              recentMsgHtml += '<div style="padding: 1rem; border-left: 3px solid ' + borderColor + '; background: ' + bgColor + '; border-radius: 0 var(--radius-md) var(--radius-md) 0;">';
+              recentMsgHtml += '<div class="flex justify-between">';
+              recentMsgHtml += '<strong>' + userName + ' (' + farmName + ')</strong>';
+              recentMsgHtml += '<span class="text-secondary text-sm">' + getTimeAgo(msg.created_at) + '</span>';
+              recentMsgHtml += '</div>';
+              recentMsgHtml += '<p class="text-sm" style="margin-top: 0.5rem;">' + content + '</p>';
+              recentMsgHtml += '</div>';
+          });
+      } else {
+          recentMsgHtml = '<p class="text-secondary">' + t('common.noData') + '</p>';
+      }
+
+      // Build recent photos HTML
+      var recentPhotoHtml = '';
+      if (recentPhotos.length) {
+          recentPhotos.forEach(function(p) {
+              recentPhotoHtml += '<img src="' + p.thumbnail_path + '" style="width:100%; height:100px; object-fit:cover; border-radius:var(--radius-sm);" alt="farm">';
+          });
+      } else {
+          recentPhotoHtml = '<p class="text-secondary">' + t('common.noData') + '</p>';
+      }
+
       container.innerHTML = `
         <div class="page-container" style="animation: fadeIn 0.4s ease-out;">
           <div class="flex justify-between items-center" style="margin-bottom: 2rem;">
@@ -123,56 +292,9 @@ export async function renderDashboard(container) {
           </div>
 
         <!-- FARM PLANNING MAP -->
-        <h3 class="section-title" style="margin-bottom: 1rem;">&#x1F33E; 全农场作物规划图 (Farm Planning Map)</h3>
+        <h3 class="section-title" style="margin-bottom: 1rem;">&#x1F33E; Farm Planning Map</h3>
         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
-          ${zonePlans.map(plan => {
-             let statusColor = 'var(--text-secondary)';
-             let statusText = '空置 (Idle)';
-             let countdown = '';
-             let emoji = '&#x26AA;';
-             
-             if (plan.status === 'planted' || plan.status === 'growing') {
-                 statusColor = 'var(--primary)';
-                 statusText = '生长中 (Growing)';
-                 emoji = '&#x1F33F;';
-                 if (plan.days_left !== null) {
-                     if (plan.days_left <= 0) {
-                         statusColor = 'var(--warning)';
-                         countdown = '<br><span style="color:var(--warning);font-weight:bold;">&#x26A0;&#xFE0F; 今日可采收</span>';
-                     } else if (plan.days_left <= 3) {
-                         statusColor = 'var(--warning)';
-                         countdown = `<br><span style="color:var(--warning);font-weight:bold;">&#x26A0;&#xFE0F; ${plan.days_left} 天后采收</span>`;
-                     } else {
-                         countdown = `<br><span class="text-secondary">剩余 ${plan.days_left} 天</span>`;
-                     }
-                 }
-             } else if (plan.status === 'harvesting') {
-                 statusColor = '#d97706';
-                 statusText = '采收期 (Harvesting)';
-                 emoji = '&#x1F34E;';
-             } else if (plan.status === 'preparing') {
-                 statusColor = '#8b5cf6';
-                 statusText = '翻土重种 (Preparing)';
-                 emoji = '&#x1F6A7;';
-             }
-             
-             const parentStr = plan.parent_zone ? `${plan.parent_zone} - ` : '';
-             
-             return `
-             <div class="glass-panel" style="padding: 1rem; cursor: pointer; border-left: 4px solid ${statusColor};" onclick="openZonePlanModal(${plan.id})">
-                 <div class="flex justify-between items-center">
-                     <h4 style="margin: 0; font-size: 1.1rem;">${parentStr}${plan.zone_name}</h4>
-                     <span style="font-size: 1.2rem;">${emoji}</span>
-                 </div>
-                 <div style="margin-top: 0.5rem; font-size: 0.95rem;">
-                     <strong>${plan.crop_name || '未种植'}</strong>
-                     <div style="color: ${statusColor}; margin-top: 0.2rem;">${statusText}${countdown}</div>
-                 </div>
-                 ${plan.next_crop_name ? `<div style="margin-top: 0.5rem; font-size: 0.8rem;" class="text-secondary">▶ 下一轮: ${plan.next_crop_name}</div>` : ''}
-             </div>
-             `;
-          }).join('')}
-          ${zonePlans.length === 0 ? '<p class="text-secondary">没有规划数据。请先建立区域。</p>' : ''}
+          ${zonePlanCardsHtml}
         </div>
 
         <!-- ZONE PLAN MODAL CONTAINER -->
@@ -181,28 +303,28 @@ export async function renderDashboard(container) {
 
         <div class="stats-grid slide-in">
           <div class="stat-card">
-            <div class="stat-icon stat-green">🌾</div>
+            <div class="stat-icon stat-green">&#x1F33E;</div>
             <div class="stat-info">
               <div class="stat-value">${farms.length}</div>
               <div class="stat-label">${t('dashboard.totalFarms')}</div>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon stat-blue">💬</div>
+            <div class="stat-icon stat-blue">&#x1F4AC;</div>
             <div class="stat-info">
               <div class="stat-value">${todayMessages}</div>
               <div class="stat-label">${t('dashboard.todayMessages')}</div>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon stat-amber">📸</div>
+            <div class="stat-icon stat-amber">&#x1F4F8;</div>
             <div class="stat-info">
               <div class="stat-value">${todayPhotos}</div>
               <div class="stat-label">${t('dashboard.todayPhotos')}</div>
             </div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon stat-purple">📋</div>
+            <div class="stat-icon stat-purple">&#x1F4CB;</div>
             <div class="stat-info">
               <div class="stat-value">${activeTasks}</div>
               <div class="stat-label">${t('dashboard.activeTasks')}</div>
@@ -214,24 +336,14 @@ export async function renderDashboard(container) {
           <div class="glass-panel" style="flex: 2; padding: 1.5rem; min-width: 300px;">
             <h3 class="section-title">${t('dashboard.recentActivity')}</h3>
             <div class="flex flex-col gap-4">
-              ${recentMessages.length ? recentMessages.map(msg => `
-                <div style="padding: 1rem; border-left: 3px solid ${msg.is_reply ? 'var(--primary)' : 'var(--warning)'}; background: ${msg.is_reply ? 'rgba(45,80,22,0.05)' : 'rgba(245,127,23,0.05)'}; border-radius: 0 var(--radius-md) var(--radius-md) 0;">
-                  <div class="flex justify-between">
-                    <strong>${msg.line_user_name || 'System'} (${farmMap[msg.farm_id] || 'Unknown Farm'})</strong>
-                    <span class="text-secondary text-sm" title="${new Date(msg.created_at).toLocaleString()}">${getTimeAgo(msg.created_at)}</span>
-                  </div>
-                  <p class="text-sm" style="margin-top: 0.5rem;">${msg.message_type === 'image' ? '[Photo]' : (msg.content || '[Empty]')}</p>
-                </div>
-              `).join('') : `<p class="text-secondary">${t('common.noData')}</p>`}
+              ${recentMsgHtml}
             </div>
           </div>
 
           <div class="glass-panel" style="flex: 1; padding: 1.5rem; min-width: 300px;">
             <h3 class="section-title">${t('dashboard.recentPhotos')}</h3>
             <div class="photo-grid" style="grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
-              ${recentPhotos.length ? recentPhotos.map(p => `
-                <img src="${p.thumbnail_path}" style="width:100%; height:100px; object-fit:cover; border-radius:var(--radius-sm);" alt="farm">
-              `).join('') : `<p class="text-secondary">${t('common.noData')}</p>`}
+              ${recentPhotoHtml}
             </div>
           </div>
         </div>
@@ -240,72 +352,24 @@ export async function renderDashboard(container) {
     `;
     
       // Inject Modal logic globally
-      window.openZonePlanModal = (planId) => {
-          const plan = zonePlans.find(p => p.id === planId);
+      window.openZonePlanModal = function(planId) {
+          var plan = zonePlans.find(function(p) { return p.id === planId; });
           if (!plan) return;
           
-          const cropOptions = crops.map(c => \`<option value="\${c.id}" \${plan.crop_id === c.id ? 'selected' : ''}>\${c.name}</option>\`).join('');
+          var cropOptionsHtml = crops.map(function(c) { return buildCropOption(c, plan.crop_id); }).join('');
+          var modalHtml = buildModalHtml(plan, cropOptionsHtml);
           
-          const modalHtml = \`
-            <div class="glass-panel" style="background: var(--bg-primary); padding: 2rem; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-                <div class="flex justify-between items-center" style="margin-bottom: 1.5rem;">
-                    <h3 style="margin:0;">\${plan.parent_zone ? plan.parent_zone + ' - ' : ''}\${plan.zone_name} 规划详情</h3>
-                    <button class="icon-btn" onclick="document.getElementById('zone-plan-modal').style.display='none'">❌</button>
-                </div>
-                
-                <div class="form-group">
-                    <label>状态 (Status)</label>
-                    <select id="zp-status" class="form-control">
-                        <option value="idle" \${plan.status === 'idle' ? 'selected' : ''}>空置 (Idle)</option>
-                        <option value="planted" \${plan.status === 'planted' || plan.status === 'growing' ? 'selected' : ''}>生长中 (Planted/Growing)</option>
-                        <option value="harvesting" \${plan.status === 'harvesting' ? 'selected' : ''}>采收期 (Harvesting)</option>
-                        <option value="preparing" \${plan.status === 'preparing' ? 'selected' : ''}>翻土重种 (Preparing)</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>当前作物 (Current Crop)</label>
-                    <select id="zp-crop" class="form-control">
-                        <option value="">-- 选择作物 --</option>
-                        \${cropOptions}
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>种植日期 (Planted Date)</label>
-                    <input type="date" id="zp-date" class="form-control" value="\${plan.planted_date || ''}">
-                </div>
-                
-                <div class="form-group">
-                    <label>下一轮轮作 (Next Crop)</label>
-                    <input type="text" id="zp-next" class="form-control" value="\${plan.next_crop_name || ''}" placeholder="例如: 黄瓜">
-                </div>
-                
-                <div class="form-group">
-                    <label>历史采收记录 (Last Harvest kg)</label>
-                    <input type="number" step="0.1" id="zp-kg" class="form-control" value="\${plan.last_harvest_kg || ''}">
-                </div>
-                
-                <div style="margin-top: 2rem; display: flex; gap: 1rem;">
-                    <button class="btn btn-primary" style="flex:1;" onclick="saveZonePlan(\${plan.id})">保存设定 (Save)</button>
-                    \${plan.status === 'growing' ? \`<button class="btn btn-warning" style="flex:1;" onclick="actionZonePlan(\${plan.id}, 'harvest')">▶ 开始采收</button>\` : ''}
-                    \${plan.status === 'harvesting' ? \`<button class="btn btn-secondary" style="flex:1; background:#8b5cf6;" onclick="actionZonePlan(\${plan.id}, 'finish')">▶ 采收结束 (去翻土)</button>\` : ''}
-                    \${plan.status === 'preparing' ? \`<button class="btn btn-danger" style="flex:1;" onclick="actionZonePlan(\${plan.id}, 'clear')">▶ 清空区域</button>\` : ''}
-                </div>
-            </div>
-          \`;
-          
-          const modal = document.getElementById('zone-plan-modal');
+          var modal = document.getElementById('zone-plan-modal');
           modal.innerHTML = modalHtml;
           modal.style.display = 'flex';
       };
       
-      window.saveZonePlan = async (planId) => {
-          const status = document.getElementById('zp-status').value;
-          const cropId = document.getElementById('zp-crop').value;
-          const plantedDate = document.getElementById('zp-date').value;
-          const nextCrop = document.getElementById('zp-next').value;
-          const kg = document.getElementById('zp-kg').value;
+      window.saveZonePlan = async function(planId) {
+          var status = document.getElementById('zp-status').value;
+          var cropId = document.getElementById('zp-crop').value;
+          var plantedDate = document.getElementById('zp-date').value;
+          var nextCrop = document.getElementById('zp-next').value;
+          var kg = document.getElementById('zp-kg').value;
           
           if (status === 'idle') {
               await actionZonePlan(planId, 'clear');
@@ -313,24 +377,24 @@ export async function renderDashboard(container) {
           }
           
           if (!cropId || !plantedDate) {
-              alert("必须选择作物和种植日期");
+              alert("Please select a crop and planting date");
               return;
           }
           
           try {
               // Create or replace crop plan
-              await apiFetch(\`/farms/\${params.farm_id}/zone-plans\`, {
+              await apiFetch('/farms/' + params.farm_id + '/zone-plans', {
                   method: 'POST',
                   headers: {'Content-Type': 'application/json'},
                   body: JSON.stringify({
-                      zone_id: zonePlans.find(p => p.id === planId).zone_id,
+                      zone_id: zonePlans.find(function(p) { return p.id === planId; }).zone_id,
                       crop_id: parseInt(cropId),
                       planted_date: plantedDate
                   })
               });
               
               // Update extra info
-              await apiFetch(\`/farms/zone-plans/\${planId}\`, {
+              await apiFetch('/farms/zone-plans/' + planId, {
                   method: 'PUT',
                   headers: {'Content-Type': 'application/json'},
                   body: JSON.stringify({
@@ -343,24 +407,24 @@ export async function renderDashboard(container) {
               document.getElementById('zone-plan-modal').style.display = 'none';
               renderDashboard(container); // reload
           } catch(e) {
-              alert("保存失败");
+              alert("Save failed");
           }
       };
       
-      window.actionZonePlan = async (planId, action) => {
+      window.actionZonePlan = async function(planId, action) {
           try {
-              await apiFetch(\`/farms/zone-plans/\${planId}/action/\${action}\`, { method: 'POST' });
+              await apiFetch('/farms/zone-plans/' + planId + '/action/' + action, { method: 'POST' });
               document.getElementById('zone-plan-modal').style.display = 'none';
               renderDashboard(container); // reload
           } catch(e) {
-              alert("操作失败");
+              alert("Action failed");
           }
       };
       
     }
   } catch (err) {
     console.error('Failed to load dashboard data:', err);
-    container.innerHTML = `<div class="page-container"><p style="color:var(--danger)">Error loading dashboard data.</p></div>`;
+    container.innerHTML = '<div class="page-container"><p style="color:var(--danger)">Error loading dashboard data.</p></div>';
   }
 }
 
@@ -376,9 +440,9 @@ function getTimeAgo(dateString) {
   const diffMins = Math.round(diffMs / 60000);
   
   if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins} mins ago`;
+  if (diffMins < 60) return diffMins + ' mins ago';
   const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours} hours ago`;
+  if (diffHours < 24) return diffHours + ' hours ago';
   const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays} days ago`;
+  return diffDays + ' days ago';
 }
