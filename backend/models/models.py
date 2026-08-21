@@ -104,7 +104,8 @@ class Task(Base):
 
     farm = relationship("Farm")
     zone = relationship("FarmZone")
-    assignee = relationship("User")
+    assignee = relationship("User", foreign_keys=[assigned_to])
+    verifier = relationship("User", foreign_keys=[verified_by])
 
 class DailyReport(Base):
     __tablename__ = "daily_reports"
