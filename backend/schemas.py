@@ -25,6 +25,8 @@ class FarmBase(BaseModel):
     name: str
     location: Optional[str] = None
     description: Optional[str] = None
+    check_time: str = "18:00"
+    summary_time: str = "19:00"
 
 class FarmCreate(FarmBase):
     pass

@@ -101,8 +101,13 @@ async def startup_event():
             await session.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS target_role VARCHAR DEFAULT 'worker';"))
             await session.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS verified_by INTEGER;"))
             await session.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP;"))
+            
+            # New time columns for Farms
+            await session.execute(text("ALTER TABLE farms ADD COLUMN IF NOT EXISTS check_time VARCHAR DEFAULT '18:00';"))
+            await session.execute(text("ALTER TABLE farms ADD COLUMN IF NOT EXISTS summary_time VARCHAR DEFAULT '19:00';"))
+            
             await session.commit()
-            print("Successfully added new columns for Foreman verification.")
+            print("Successfully added new columns for Foreman verification and Time Settings.")
         except Exception as e:
             print(f"Migration skipped or failed (safe to ignore if SQLite): {e}")
 

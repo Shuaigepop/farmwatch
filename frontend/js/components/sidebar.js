@@ -20,16 +20,15 @@ export async function renderSidebar(container, currentRoute) {
     navItems.push({ id: 'settings', icon: '⚙️', label: t('nav.settings'), route: 'index.html#/settings' });
   }
 
-  navItems.push(
-    { id: 'photos', icon: '🖼️', label: t('nav.photoWall'), route: 'index.html#/photos' },
-    { id: 'messages', icon: '💬', label: t('nav.messages'), route: 'index.html#/messages' },
-    { id: 'progress', icon: '📋', label: t('nav.progress'), route: 'index.html#/progress' },
-    { id: 'health', icon: '🩺', label: t('nav.healthReport'), route: 'index.html#/health' },
-    { id: 'summary', icon: '📄', label: t('nav.dailySummary') || 'Daily Summary', route: 'index.html#/summary' },
-    { id: 'inventory', icon: '📦', label: t('nav.inventory') || 'Inventory (资材设定)', route: 'index.html#/inventory' },
-    { id: 'deliveries', icon: '🧾', label: 'Deliveries (出货对账)', route: 'index.html#/deliveries' },
-    { id: 'scheduler', icon: '🤖', label: 'Scheduler (AI派发)', route: 'index.html#/scheduler' }
-  );
+    navItems.push(
+      { id: 'photos', icon: '🖼️', label: t('nav.photoWall'), route: 'index.html#/photos' },
+      { id: 'messages', icon: '💬', label: t('nav.messages'), route: 'index.html#/messages' },
+      { id: 'progress', icon: '📋', label: 'Task Dashboard (任务总管)', route: 'index.html#/progress' },
+      { id: 'health', icon: '🩺', label: t('nav.healthReport'), route: 'index.html#/health' },
+      { id: 'summary', icon: '📄', label: t('nav.dailySummary') || 'Daily Summary', route: 'index.html#/summary' },
+      { id: 'inventory', icon: '📦', label: t('nav.inventory') || 'Inventory (资材设定)', route: 'index.html#/inventory' },
+      { id: 'deliveries', icon: '🧾', label: 'Deliveries (出货对账)', route: 'index.html#/deliveries' }
+    );
 
   let farmSelectorHtml = '';
   if (['boss', 'supervisor'].includes((user.role || '').toLowerCase())) {

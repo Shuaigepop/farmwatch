@@ -169,11 +169,11 @@ async def schedule_watering_task():
     except Exception as e:
         print(f"Error in schedule_watering_task: {e}")
 
-async def check_missing_work_6pm():
-    print(f"[{datetime.now()}] Running 6PM missing work check...")
+async def check_missing_work_by_farms(farms_to_check):
+    print(f"[{datetime.now()}] Running missing work check for {len(farms_to_check)} farms...")
     try:
         async with AsyncSessionLocal() as session:
-            farms_result = await session.execute(select(Farm))
+            farms_result = await session.execute(select(Farm).where(Farm.id.in_([f.id for f in farms_to_check])))
             farms = farms_result.scalars().all()
             groups_result = await session.execute(select(LineGroup))
             all_groups = groups_result.scalars().all()
@@ -207,11 +207,11 @@ async def check_missing_work_6pm():
     except Exception as e:
         print(f"Error in check_missing_work_6pm: {e}")
 
-async def generate_evening_summary_7pm():
-    print(f"[{datetime.now()}] Running 7PM summary and prep...")
+async def generate_evening_summary_by_farms(farms_to_check):
+    print(f"[{datetime.now()}] Running summary and prep for {len(farms_to_check)} farms...")
     try:
         async with AsyncSessionLocal() as session:
-            farms_result = await session.execute(select(Farm))
+            farms_result = await session.execute(select(Farm).where(Farm.id.in_([f.id for f in farms_to_check])))
             farms = farms_result.scalars().all()
             groups_result = await session.execute(select(LineGroup))
             all_groups = groups_result.scalars().all()
@@ -287,6 +287,35 @@ async def create_weekly_health_check_tasks():
     except Exception as e:
         print(f"Error in create_weekly_health_check_tasks: {e}")
 
+async def heartbeat_check():
+    """Runs every minute to trigger farm-specific tasks based on their custom times."""
+    now_str = datetime.now().strftime("%H:%M")
+    try:
+        async with AsyncSessionLocal() as session:
+            farms_result = await session.execute(select(Farm))
+            farms = farms_result.scalars().all()
+            
+            farms_for_check = []
+            farms_for_summary = []
+            
+            for farm in farms:
+                # Default fallback if empty
+                check_t = farm.check_time or "18:00"
+                summary_t = farm.summary_time or "19:00"
+                
+                if check_t == now_str:
+                    farms_for_check.append(farm)
+                if summary_t == now_str:
+                    farms_for_summary.append(farm)
+            
+            if farms_for_check:
+                await check_missing_work_by_farms(farms_for_check)
+            if farms_for_summary:
+                await generate_evening_summary_by_farms(farms_for_summary)
+                
+    except Exception as e:
+        print(f"Error in heartbeat_check: {e}")
+
 def init_scheduler():
     scheduler.add_job(generate_and_send_daily_reports, CronTrigger(hour=23, minute=0))
     
@@ -296,8 +325,7 @@ def init_scheduler():
     
     # The new jobs user requested:
     scheduler.add_job(schedule_watering_task, CronTrigger(hour=11, minute=0), id='watering', replace_existing=True)
-    scheduler.add_job(check_missing_work_6pm, CronTrigger(hour=18, minute=0), id='missing_work', replace_existing=True)
-    scheduler.add_job(generate_evening_summary_7pm, CronTrigger(hour=19, minute=0), id='evening_summary', replace_existing=True)
+    scheduler.add_job(heartbeat_check, CronTrigger(minute="*"), id='heartbeat_check', replace_existing=True)
     scheduler.add_job(create_weekly_health_check_tasks, CronTrigger(day_of_week='mon', hour=8, minute=0), id='monday_health', replace_existing=True)
     
     scheduler.start()

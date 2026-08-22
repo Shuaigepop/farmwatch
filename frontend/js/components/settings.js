@@ -144,46 +144,6 @@ export async function renderSettings(container) {
         </div>
       </div>
 
-      <div style="display: flex; flex-wrap: wrap; gap: 2rem; margin-top: 2rem;">
-        <div class="glass-panel" style="padding: 2rem; flex: 1; min-width: 300px;">
-          <h3 class="section-title">SOP / Daily Tasks Management</h3>
-          <p class="text-secondary text-sm" style="margin-bottom: 1rem;">Define recurring daily tasks for workers and foremen. These will automatically appear in the AI scheduler.</p>
-          
-          <div class="form-group" style="margin-bottom: 1rem;">
-            <select id="sop-farm-select" class="form-input" style="width: 100%; padding: 0.8rem; border-radius: var(--radius-sm); border: 1px solid rgba(0,0,0,0.1);">
-              <option value="">Loading...</option>
-            </select>
-          </div>
-          
-          <div id="sop-list-container" style="margin-top: 1rem; max-height: 350px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; background: rgba(255,255,255,0.3);">
-            <div class="text-secondary text-sm text-center" style="padding: 1rem;">Select a farm above</div>
-          </div>
-          
-          <div style="padding: 1.2rem; border-top: 2px solid var(--primary); margin-top: 1rem; background: rgba(45,80,22,0.05); border-radius: 0 0 var(--radius-md) var(--radius-md);">
-            <h4 style="margin-bottom: 0.8rem; color: var(--primary);">&#x2795; Add New SOP Task</h4>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
-              <div>
-                <label class="text-secondary text-sm">Task Title</label>
-                <input type="text" id="new-sop-title" placeholder="e.g. Morning watering" class="form-input" style="width:100%; padding: 0.5rem; border-radius: var(--radius-sm); border: 1px solid rgba(0,0,0,0.1);">
-              </div>
-              <div>
-                <label class="text-secondary text-sm">Assign To</label>
-                <select id="new-sop-role" class="form-input" style="width:100%; padding: 0.5rem; border-radius: var(--radius-sm); border: 1px solid rgba(0,0,0,0.1);">
-                  <option value="worker">Worker</option>
-                  <option value="foreman">Foreman</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group" style="margin-bottom: 0.5rem;">
-              <label class="text-secondary text-sm">Description</label>
-              <input type="text" id="new-sop-desc" placeholder="Detailed instructions" class="form-input" style="width:100%; padding: 0.5rem; border-radius: var(--radius-sm); border: 1px solid rgba(0,0,0,0.1);">
-            </div>
-            <button class="btn btn-primary" id="add-sop-btn" style="width: 100%; padding: 0.6rem; background: var(--primary); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer;" disabled>
-              Add SOP Task
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   `;
 
@@ -192,7 +152,6 @@ export async function renderSettings(container) {
   await loadLineGroups();
   await initZoneManagement();
   await initCropManagement();
-  await initSOPManagement();
 
   document.getElementById('create-farm-form').addEventListener('submit', async (e) => {
     e.preventDefault();
