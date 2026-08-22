@@ -295,10 +295,10 @@ export async function renderProgress(container) {
           sopContainer.innerHTML = sops.map(s => `
             <div style="padding: 1rem; border-bottom: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
               <div>
-                <div style="font-weight:600;">\${s.title} <span class="badge badge-info" style="font-size:0.7rem;">\${s.target_role === 'foreman' ? '工头任务' : '员工任务'}</span></div>
-                <div class="text-secondary text-sm">\${s.description || ''}</div>
+                <div style="font-weight:600;">${s.title} <span class="badge badge-info" style="font-size:0.7rem;">${s.target_role === 'foreman' ? '工头任务' : '员工任务'}</span></div>
+                <div class="text-secondary text-sm">${s.description || ''}</div>
               </div>
-              <button class="icon-btn text-danger delete-sop-btn" data-id="\${s.id}">🗑️</button>
+              <button class="icon-btn text-danger delete-sop-btn" data-id="${s.id}">🗑️</button>
             </div>
           `).join('');
 
