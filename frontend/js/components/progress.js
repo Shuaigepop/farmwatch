@@ -350,6 +350,6 @@ export async function renderProgress(container) {
 
   } catch (err) {
     console.error('Failed to load tasks:', err);
-    container.innerHTML = \`<div class="page-container"><p style="color:var(--danger)">Error loading progress board.</p></div>\`;
+    container.innerHTML = `<div class="page-container"><p style="color:var(--danger)">Error loading progress board.</p></div>`;
   }
 }
