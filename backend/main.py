@@ -54,6 +54,24 @@ async def startup_event():
     
     # 建立預設資料 (Create default seed data)
     async with AsyncSessionLocal() as session:
+        # 针对 PostgreSQL 的线上资料库迁移 (Auto-migration for Render Postgres)
+        # Must run BEFORE any queries (like select(Farm)) to avoid UndefinedColumnError
+        try:
+            from sqlalchemy import text
+            await session.execute(text("ALTER TABLE recurring_tasks ADD COLUMN IF NOT EXISTS target_role VARCHAR DEFAULT 'worker';"))
+            await session.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS target_role VARCHAR DEFAULT 'worker';"))
+            await session.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS verified_by INTEGER;"))
+            await session.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP;"))
+            
+            # New time columns for Farms
+            await session.execute(text("ALTER TABLE farms ADD COLUMN IF NOT EXISTS check_time VARCHAR DEFAULT '18:00';"))
+            await session.execute(text("ALTER TABLE farms ADD COLUMN IF NOT EXISTS summary_time VARCHAR DEFAULT '19:00';"))
+            
+            await session.commit()
+            print("Successfully added new columns for Foreman verification and Time Settings.")
+        except Exception as e:
+            print(f"Migration skipped or failed (safe to ignore if SQLite): {e}")
+
         # 預設老闆帳號 (Default boss account)
         result = await session.execute(select(User).where(User.username == "admin"))
         if not result.scalar_one_or_none():
@@ -93,23 +111,6 @@ async def startup_event():
             
         # 自动填充所有农场的示范规划数据 (Auto seed demo planning data for all farms)
         await auto_seed_all_farms(session)
-
-        # 针对 PostgreSQL 的线上资料库迁移 (Auto-migration for Render Postgres)
-        try:
-            from sqlalchemy import text
-            await session.execute(text("ALTER TABLE recurring_tasks ADD COLUMN IF NOT EXISTS target_role VARCHAR DEFAULT 'worker';"))
-            await session.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS target_role VARCHAR DEFAULT 'worker';"))
-            await session.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS verified_by INTEGER;"))
-            await session.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP;"))
-            
-            # New time columns for Farms
-            await session.execute(text("ALTER TABLE farms ADD COLUMN IF NOT EXISTS check_time VARCHAR DEFAULT '18:00';"))
-            await session.execute(text("ALTER TABLE farms ADD COLUMN IF NOT EXISTS summary_time VARCHAR DEFAULT '19:00';"))
-            
-            await session.commit()
-            print("Successfully added new columns for Foreman verification and Time Settings.")
-        except Exception as e:
-            print(f"Migration skipped or failed (safe to ignore if SQLite): {e}")
 
 # Include API routers
 app.include_router(auth.router)
