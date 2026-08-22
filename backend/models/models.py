@@ -27,6 +27,7 @@ class Farm(Base):
     created_at = Column(DateTime, default=utc_now)
     check_time = Column(String, default="18:00")
     summary_time = Column(String, default="19:00")
+    sop_time = Column(String, default="06:00")
 
 class FarmZone(Base):
     __tablename__ = "farm_zones"
@@ -101,6 +102,7 @@ class Task(Base):
     verified_at = Column(DateTime, nullable=True)
     due_date = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
+    notify_time = Column(String, nullable=True) # e.g. "14:30"
     created_at = Column(DateTime, default=utc_now)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 

@@ -27,6 +27,7 @@ class FarmBase(BaseModel):
     description: Optional[str] = None
     check_time: str = "18:00"
     summary_time: str = "19:00"
+    sop_time: str = "06:00"
 
 class FarmCreate(FarmBase):
     pass
@@ -71,6 +72,7 @@ class TaskBase(BaseModel):
     stage: Optional[str] = None
     assigned_to: Optional[int] = None
     due_date: Optional[datetime] = None
+    notify_time: Optional[str] = None
 
 class TaskCreate(TaskBase):
     farm_id: int

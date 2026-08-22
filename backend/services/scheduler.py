@@ -287,6 +287,71 @@ async def create_weekly_health_check_tasks():
     except Exception as e:
         print(f"Error in create_weekly_health_check_tasks: {e}")
 
+async def dispatch_sops(farm, session):
+    try:
+        groups_result = await session.execute(select(LineGroup.line_group_id).where(LineGroup.farm_id == farm.id))
+        farm_groups = groups_result.scalars().all()
+        
+        # Get active recurring tasks for this farm
+        result = await session.execute(select(RecurringTask).where(and_(RecurringTask.farm_id == farm.id, RecurringTask.is_active == True)))
+        r_tasks = result.scalars().all()
+        
+        if not r_tasks:
+            return
+            
+        generated_titles = []
+        for rt in r_tasks:
+            new_task = Task(
+                farm_id=rt.farm_id,
+                zone_id=rt.zone_id,
+                title=rt.title,
+                description=rt.description,
+                stage="growing",
+                status="pending",
+                target_role=rt.target_role,
+                due_date=utc_now() + timedelta(hours=24)
+            )
+            session.add(new_task)
+            generated_titles.append(rt.title)
+            
+        await session.commit()
+        print(f"[{farm.name}] Dispatched {len(r_tasks)} SOP tasks.")
+        
+        # Notify LINE group
+        if farm_groups and generated_titles:
+            msg = f"🌅 【{farm.name} - 每日例行工作已派发】\n\n" + "\n".join([f"- {t}" for t in generated_titles])
+            for g in farm_groups:
+                line_service.send_text_message(g, msg)
+                
+    except Exception as e:
+        print(f"Error in dispatch_sops for {farm.name}: {e}")
+
+async def check_adhoc_notifications(farm, session, now_str):
+    try:
+        groups_result = await session.execute(select(LineGroup.line_group_id).where(LineGroup.farm_id == farm.id))
+        farm_groups = groups_result.scalars().all()
+        if not farm_groups:
+            return
+            
+        # Get pending tasks that should notify now
+        result = await session.execute(select(Task).where(and_(Task.farm_id == farm.id, Task.status == "pending", Task.notify_time == now_str)))
+        tasks = result.scalars().all()
+        
+        for task in tasks:
+            assignee_str = f" @ {task.assignee.display_name}" if task.assignee else " (全体员工/All)"
+            msg = f"🔔 【临时任务提醒 / Task Reminder】\n\n📝 任务: {task.title}\n👤 指派给: {assignee_str}\n\n请尽快处理！(Please handle ASAP!)"
+            for g in farm_groups:
+                line_service.send_text_message(g, msg)
+                
+            # Clear notify_time so it doesn't trigger again
+            task.notify_time = None
+            
+        if tasks:
+            await session.commit()
+            
+    except Exception as e:
+        print(f"Error in check_adhoc_notifications for {farm.name}: {e}")
+
 async def heartbeat_check():
     """Runs every minute to trigger farm-specific tasks based on their custom times."""
     now_str = datetime.now().strftime("%H:%M")
@@ -302,11 +367,16 @@ async def heartbeat_check():
                 # Default fallback if empty
                 check_t = farm.check_time or "18:00"
                 summary_t = farm.summary_time or "19:00"
+                sop_t = farm.sop_time or "06:00"
                 
                 if check_t == now_str:
                     farms_for_check.append(farm)
                 if summary_t == now_str:
                     farms_for_summary.append(farm)
+                if sop_t == now_str:
+                    await dispatch_sops(farm, session)
+                    
+                await check_adhoc_notifications(farm, session, now_str)
             
             if farms_for_check:
                 await check_missing_work_by_farms(farms_for_check)
@@ -318,12 +388,7 @@ async def heartbeat_check():
 
 def init_scheduler():
     scheduler.add_job(generate_and_send_daily_reports, CronTrigger(hour=23, minute=0))
-    
-    # New jobs for task automation
-    scheduler.add_job(sync_recurring_jobs, IntervalTrigger(minutes=60), id='sync_jobs', replace_existing=True)
     scheduler.add_job(generate_harvest_tasks, CronTrigger(hour=0, minute=1), id='daily_harvest', replace_existing=True)
-    
-    # The new jobs user requested:
     scheduler.add_job(schedule_watering_task, CronTrigger(hour=11, minute=0), id='watering', replace_existing=True)
     scheduler.add_job(heartbeat_check, CronTrigger(minute="*"), id='heartbeat_check', replace_existing=True)
     scheduler.add_job(create_weekly_health_check_tasks, CronTrigger(day_of_week='mon', hour=8, minute=0), id='monday_health', replace_existing=True)
@@ -331,6 +396,5 @@ def init_scheduler():
     scheduler.start()
     
     # Initial trigger for dynamic jobs
-    asyncio.get_event_loop().create_task(sync_recurring_jobs())
     asyncio.get_event_loop().create_task(generate_harvest_tasks())
     print("APScheduler fully initialized with Task Automation!")

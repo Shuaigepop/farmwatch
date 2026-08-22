@@ -66,6 +66,10 @@ async def startup_event():
             # New time columns for Farms
             await session.execute(text("ALTER TABLE farms ADD COLUMN IF NOT EXISTS check_time VARCHAR DEFAULT '18:00';"))
             await session.execute(text("ALTER TABLE farms ADD COLUMN IF NOT EXISTS summary_time VARCHAR DEFAULT '19:00';"))
+            await session.execute(text("ALTER TABLE farms ADD COLUMN IF NOT EXISTS sop_time VARCHAR DEFAULT '06:00';"))
+            
+            # New time column for Tasks
+            await session.execute(text("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS notify_time VARCHAR;"))
             
             await session.commit()
             print("Successfully added new columns for Foreman verification and Time Settings.")
