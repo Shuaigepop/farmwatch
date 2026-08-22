@@ -67,18 +67,18 @@ export async function renderProgress(container) {
     const renderTaskCard = (task) => {
       let assigneeName = task.assigned_to ? (userMap[task.assigned_to]?.display_name || 'Worker') : '未指派';
       return `
-      <div class="task-card fade-in">
-        <div class="task-header" style="display:flex; justify-content:space-between; align-items:center;">
-          <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:600;">
-            <input type="checkbox" class="task-checkbox" data-id="${task.id}" ${task.status === 'completed' ? 'checked disabled' : ''}>
-            <span style="${task.status === 'completed' ? 'text-decoration:line-through; color:var(--text-secondary);' : ''}">${task.title}</span>
+      <div class="task-card fade-in" style="display: flex; flex-direction: column; position: relative;">
+        <div class="task-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <label style="display:flex; align-items:flex-start; gap:0.5rem; cursor:pointer; font-weight:600; flex:1;">
+            <input type="checkbox" class="task-checkbox" data-id="${task.id}" ${task.status === 'completed' ? 'checked disabled' : ''} style="margin-top:0.3rem;">
+            <span style="word-break: break-word; ${task.status === 'completed' ? 'text-decoration:line-through; color:var(--text-secondary);' : ''}">${task.title}</span>
           </label>
-          <span class="badge ${task.status === 'completed' ? 'badge-success' : 'badge-warning'}">${task.status === 'completed' ? '已完成' : '待办'}</span>
+          <span class="badge ${task.status === 'completed' ? 'badge-success' : 'badge-warning'}" style="white-space: nowrap; margin-left: 0.5rem;">${task.status === 'completed' ? '已完成' : '待办'}</span>
         </div>
-        <p class="text-secondary text-sm" style="margin-left: 1.5rem; margin-top:0.2rem; margin-bottom:0.5rem;">${task.description || ''}</p>
-        <div style="margin-left: 1.5rem; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem;">
-           <span style="color:var(--primary);">👤 ${assigneeName}</span>
-           ${(user.role === 'boss' || user.role === 'supervisor') ? `<button class="icon-btn delete-task-btn text-danger" data-id="${task.id}" style="padding:0;">🗑️ 删除</button>` : ''}
+        <p class="text-secondary text-sm" style="margin-left: 1.5rem; margin-top:0.2rem; margin-bottom:0.8rem; padding-right:1rem;">${task.description || ''}</p>
+        <div style="margin-left: 1.5rem; display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; margin-top: auto;">
+           <span style="color:var(--primary); background: rgba(45,80,22,0.1); padding: 0.2rem 0.5rem; border-radius: 4px;">👤 ${assigneeName}</span>
+           ${(user.role === 'boss' || user.role === 'supervisor') ? `<button class="icon-btn delete-task-btn text-danger" data-id="${task.id}" style="padding:0.2rem 0.5rem; white-space:nowrap; display:flex; align-items:center; gap:0.2rem; border-radius:4px; background:rgba(220,53,69,0.1); border:none; cursor:pointer;">🗑️ 删除</button>` : ''}
         </div>
       </div>
       `;
