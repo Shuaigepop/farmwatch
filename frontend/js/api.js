@@ -254,6 +254,8 @@ export const api = {
       if (filters.farm_id) params.append('farm_id', filters.farm_id);
       if (filters.date_from) params.append('date_from', filters.date_from);
       if (filters.date_to) params.append('date_to', filters.date_to);
+      if (filters.limit !== undefined) params.append('limit', filters.limit);
+      if (filters.offset !== undefined) params.append('offset', filters.offset);
       return apiFetch(`/messages/?${params}`);
     },
     reply: (data) => {
@@ -285,6 +287,9 @@ export const api = {
       const params = new URLSearchParams();
       if (filters.farm_id) params.append('farm_id', filters.farm_id);
       if (filters.health_status) params.append('health_status', filters.health_status);
+      if (filters.target_date) params.append('target_date', filters.target_date);
+      if (filters.limit !== undefined) params.append('limit', filters.limit);
+      if (filters.offset !== undefined) params.append('offset', filters.offset);
       return apiFetch(`/photos/?${params}`);
     },
     get: (id) => {

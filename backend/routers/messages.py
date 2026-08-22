@@ -14,6 +14,8 @@ router = APIRouter(prefix="/api/messages", tags=["messages"])
 @router.get("/", response_model=List[MessageResponse])
 async def list_messages(
     farm_id: Optional[int] = None,
+    limit: int = 30,
+    offset: int = 0,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -27,7 +29,7 @@ async def list_messages(
     elif farm_id:
         query = query.where(Message.farm_id == farm_id)
         
-    result = await db.execute(query.order_by(Message.created_at.desc()))
+    result = await db.execute(query.order_by(Message.created_at.desc()).limit(limit).offset(offset))
     return result.scalars().all()
 
 @router.get("/{msg_id}", response_model=MessageResponse)

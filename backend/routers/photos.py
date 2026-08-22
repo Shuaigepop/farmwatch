@@ -18,6 +18,8 @@ async def list_photos(
     farm_id: Optional[int] = None,
     health_status: Optional[str] = None,
     target_date: Optional[str] = None,
+    limit: int = 30,
+    offset: int = 0,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -43,7 +45,7 @@ async def list_photos(
         except ValueError:
             pass
         
-    result = await db.execute(query.order_by(Photo.captured_at.desc()))
+    result = await db.execute(query.order_by(Photo.captured_at.desc()).limit(limit).offset(offset))
     return result.scalars().all()
 
 @router.get("/{photo_id}", response_model=PhotoResponse)

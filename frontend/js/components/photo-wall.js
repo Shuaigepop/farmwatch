@@ -2,6 +2,19 @@ import { t } from '../i18n.js';
 import { api } from '../api.js';
 
 export async function renderPhotoWall(container) {
+  let currentOffset = 0;
+  const LIMIT = 30;
+  let allPhotos = [];
+  let isLoading = false;
+  let hasMore = true;
+  
+  // Set up params based on global selection
+  const params = { limit: LIMIT };
+  const globalFarmSelect = document.getElementById('global-farm-select');
+  if (globalFarmSelect && globalFarmSelect.value !== 'all') {
+    params.farm_id = parseInt(globalFarmSelect.value);
+  }
+
   container.innerHTML = `
     <div class="page-container slide-in">
       <h2 style="margin-bottom: 1.5rem;">${t('photos.title')}</h2>
@@ -17,10 +30,13 @@ export async function renderPhotoWall(container) {
       </div>
 
       <div class="photo-grid" id="photo-grid-content">
-        <!-- Skeletons while loading -->
-        <div class="photo-card skeleton"><div class="skeleton-img"></div></div>
-        <div class="photo-card skeleton"><div class="skeleton-img"></div></div>
-        <div class="photo-card skeleton"><div class="skeleton-img"></div></div>
+        <!-- Grid Items Go Here -->
+      </div>
+      
+      <!-- Loading indicator & Intersection Observer Target -->
+      <div id="loading-target" style="text-align:center; padding: 2rem;">
+        <div class="spinner" id="loading-spinner" style="display:none; margin: 0 auto;"></div>
+        <p id="no-more-text" class="text-secondary" style="display:none; margin-top: 1rem;">到底了，沒有更多照片囉！</p>
       </div>
     </div>
 
@@ -55,25 +71,14 @@ export async function renderPhotoWall(container) {
   `;
 
   const grid = document.getElementById('photo-grid-content');
-  
-  const params = {};
-  const globalFarmSelect = document.getElementById('global-farm-select');
-  if (globalFarmSelect && globalFarmSelect.value !== 'all') {
-    params.farm_id = parseInt(globalFarmSelect.value);
-  }
-
-  let photos = await api.photos.list(params);
-
-  if (!photos.length) {
-    grid.innerHTML = `<div class="text-secondary">${t('common.noData')}</div>`;
-    return;
-  }
+  const spinner = document.getElementById('loading-spinner');
+  const noMoreText = document.getElementById('no-more-text');
 
   const getStatusTag = (status) => {
     return `<span class="tag tag-${status}">${t(`health.${status}`)}</span>`;
   };
 
-  grid.innerHTML = photos.map(p => {
+  const createPhotoCardHTML = (p) => {
     let imgUrl = p.thumbnail_path || p.file_path;
     if (imgUrl && !imgUrl.startsWith('http')) {
       imgUrl = `/api/photos/uploads/${imgUrl}`;
@@ -84,7 +89,7 @@ export async function renderPhotoWall(container) {
     const status = p.health_status || 'pending';
     
     return `
-      <div class="photo-card" data-id="${p.id}">
+      <div class="photo-card fade-in" data-id="${p.id}">
         <img src="${imgUrl}" class="photo-img" loading="lazy">
         <div class="photo-info">
           <div class="photo-meta">
@@ -98,89 +103,110 @@ export async function renderPhotoWall(container) {
         </div>
       </div>
     `;
-  }).join('');
+  };
 
-  document.getElementById('photo-filter-btn').addEventListener('click', async () => {
-    const statusVal = document.getElementById('photo-status-filter').value;
-    const filterParams = { ...params };
-    if (statusVal) filterParams.health_status = statusVal;
+  // Attach click listener for Lightbox at the grid level (Event Delegation)
+  grid.addEventListener('click', (e) => {
+    const card = e.target.closest('.photo-card');
+    if (!card) return;
     
-    grid.innerHTML = '<div class="spinner"></div>';
-    photos = await api.photos.list(filterParams);
-    renderPhotoWallGrid(grid, photos);
+    const id = card.dataset.id;
+    const p = allPhotos.find(x => x.id == id);
+    if (!p) return;
+    
+    let imgUrl = p.file_path;
+    if (imgUrl && !imgUrl.startsWith('http')) {
+      imgUrl = `/api/photos/uploads/${imgUrl}`;
+    }
+    
+    document.getElementById('lightbox-img-el').src = imgUrl;
+    document.getElementById('lb-farm-name').textContent = p.farm_name || (p.farm_id ? `农场 ${p.farm_id}` : '未指定农场');
+    document.getElementById('lb-uploader').textContent = p.uploader || '员工';
+    document.getElementById('lb-date').textContent = p.captured_at ? new Date(p.captured_at).toLocaleString() : '';
+    
+    const status = p.health_status || 'pending';
+    document.getElementById('lb-status').className = `tag tag-${status}`;
+    document.getElementById('lb-status').textContent = t(`health.${status}`);
+    
+    let aiNotes = '';
+    if (p.ai_analysis) {
+      try {
+        const analysis = JSON.parse(p.ai_analysis);
+        aiNotes = analysis.notes || p.ai_analysis;
+      } catch(e) {
+        aiNotes = p.ai_analysis;
+      }
+    } else {
+      aiNotes = '待分析...';
+    }
+    document.getElementById('lb-ai-notes').textContent = aiNotes;
+    
+    document.getElementById('photo-lightbox').classList.add('active');
   });
 
-  function renderPhotoWallGrid(container, photoList) {
-    if (!photoList.length) {
-      container.innerHTML = `<div class="text-secondary">${t('common.noData')}</div>`;
-      return;
+  const loadPhotos = async (isReset = false) => {
+    if (isLoading || (!hasMore && !isReset)) return;
+    
+    isLoading = true;
+    spinner.style.display = 'block';
+    if (isReset) {
+      noMoreText.style.display = 'none';
     }
-    container.innerHTML = photoList.map(p => {
-      let imgUrl = p.thumbnail_path || p.file_path;
-      if (imgUrl && !imgUrl.startsWith('http')) {
-        imgUrl = `/api/photos/uploads/${imgUrl}`;
-      }
-      const farmName = p.farm_name || (p.farm_id ? `农场 ${p.farm_id}` : '未指定农场');
-      const dateStr = p.captured_at ? new Date(p.captured_at).toLocaleDateString() : '';
-      const uploader = p.uploader || '员工';
-      const status = p.health_status || 'pending';
-      return `
-        <div class="photo-card" data-id="${p.id}">
-          <img src="${imgUrl}" class="photo-img" loading="lazy">
-          <div class="photo-info">
-            <div class="photo-meta">
-              <span class="font-semibold">${farmName}</span>
-              <span>${dateStr}</span>
-            </div>
-            <div class="flex justify-between items-center" style="margin-top: 0.5rem;">
-              <span class="text-sm text-secondary">${uploader}</span>
-              <span class="tag tag-${status}">${t(`health.${status}`)}</span>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-    attachLightboxListeners();
-  }
 
-  function attachLightboxListeners() {
-    document.querySelectorAll('.photo-card').forEach(card => {
-      card.addEventListener('click', async () => {
-        const id = card.dataset.id;
-        const p = photos.find(x => x.id == id);
-        if (!p) return;
-        
-        let imgUrl = p.file_path;
-        if (imgUrl && !imgUrl.startsWith('http')) {
-          imgUrl = `/api/photos/uploads/${imgUrl}`;
-        }
-        
-        document.getElementById('lightbox-img-el').src = imgUrl;
-        document.getElementById('lb-farm-name').textContent = p.farm_name || (p.farm_id ? `农场 ${p.farm_id}` : '未指定农场');
-        document.getElementById('lb-uploader').textContent = p.uploader || '员工';
-        document.getElementById('lb-date').textContent = p.captured_at ? new Date(p.captured_at).toLocaleString() : '';
-        
-        const status = p.health_status || 'pending';
-        document.getElementById('lb-status').className = `tag tag-${status}`;
-        document.getElementById('lb-status').textContent = t(`health.${status}`);
-        
-        let aiNotes = '';
-        if (p.ai_analysis) {
-          try {
-            const analysis = JSON.parse(p.ai_analysis);
-            aiNotes = analysis.notes || p.ai_analysis;
-          } catch(e) {
-            aiNotes = p.ai_analysis;
-          }
-        } else {
-          aiNotes = '待分析...';
-        }
-        document.getElementById('lb-ai-notes').textContent = aiNotes;
-        
-        document.getElementById('photo-lightbox').classList.add('active');
-      });
-    });
-  }
+    try {
+      const statusVal = document.getElementById('photo-status-filter').value;
+      const fetchParams = { ...params, offset: currentOffset };
+      if (statusVal) fetchParams.health_status = statusVal;
+
+      const newPhotos = await api.photos.list(fetchParams);
+      
+      if (isReset) {
+        grid.innerHTML = '';
+        allPhotos = [];
+      }
+
+      if (newPhotos.length < LIMIT) {
+        hasMore = false;
+      }
+
+      if (newPhotos.length > 0) {
+        allPhotos.push(...newPhotos);
+        const html = newPhotos.map(createPhotoCardHTML).join('');
+        grid.insertAdjacentHTML('beforeend', html);
+      } else if (isReset) {
+        grid.innerHTML = `<div class="text-secondary" style="grid-column: 1 / -1; text-align: center;">${t('common.noData')}</div>`;
+      }
+      
+      if (!hasMore && allPhotos.length > 0) {
+         noMoreText.style.display = 'block';
+      }
+      
+      currentOffset += LIMIT;
+
+    } catch(err) {
+      console.error('Error loading photos:', err);
+    } finally {
+      isLoading = false;
+      spinner.style.display = 'none';
+    }
+  };
+
+  // Setup Intersection Observer for infinite scrolling
+  const observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) {
+      loadPhotos();
+    }
+  }, { rootMargin: '100px' });
+  
+  observer.observe(document.getElementById('loading-target'));
+
+  // Filter Button
+  document.getElementById('photo-filter-btn').addEventListener('click', () => {
+    currentOffset = 0;
+    hasMore = true;
+    grid.innerHTML = '';
+    loadPhotos(true);
+  });
 
   // Lightbox close logic
   const closeBtn = document.getElementById('lightbox-close');
@@ -189,6 +215,4 @@ export async function renderPhotoWall(container) {
       document.getElementById('photo-lightbox').classList.remove('active');
     });
   }
-  
-  renderPhotoWallGrid(grid, photos);
 }
