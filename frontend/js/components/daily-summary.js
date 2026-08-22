@@ -118,16 +118,16 @@ export async function renderDailySummary(container) {
           <div class="reports-grid" style="margin-bottom: 2rem;">
             ${photos.length ? photos.map(p => {
               const fileName = p.thumbnail_path.split('/').pop().split('\\').pop();
-              return \`
+              return `
               <div class="glass-panel fade-in" style="padding: 1rem; display:flex; gap: 1rem;">
-                <img src="/api/photos/uploads/\${fileName}" style="width: 120px; height: 120px; object-fit: cover; border-radius: var(--radius-sm);" alt="Farm Photo">
+                <img src="/api/photos/uploads/${fileName}" style="width: 120px; height: 120px; object-fit: cover; border-radius: var(--radius-sm);" alt="Farm Photo">
                 <div style="flex: 1; display:flex; flex-direction:column;">
-                   <span class="badge \${p.health_status === 'healthy' ? 'badge-success' : (p.health_status === 'warning' ? 'badge-warning' : 'badge-danger')}" style="align-self:flex-start; margin-bottom:0.5rem;">\${p.health_status.toUpperCase()}</span>
-                   <p class="text-sm text-secondary" style="margin:0; flex:1; overflow-y:auto; max-height:80px;">\${p.ai_analysis || 'No AI analysis available.'}</p>
-                   <span class="text-sm" style="color:var(--primary); margin-top:0.5rem;">\${new Date(p.captured_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                   <span class="badge ${p.health_status === 'healthy' ? 'badge-success' : (p.health_status === 'warning' ? 'badge-warning' : 'badge-danger')}" style="align-self:flex-start; margin-bottom:0.5rem;">${p.health_status.toUpperCase()}</span>
+                   <p class="text-sm text-secondary" style="margin:0; flex:1; overflow-y:auto; max-height:80px;">${p.ai_analysis || 'No AI analysis available.'}</p>
+                   <span class="text-sm" style="color:var(--primary); margin-top:0.5rem;">${new Date(p.captured_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
                 </div>
               </div>
-              \`;
+              `;
             }).join('') : '<div class="glass-panel"><p class="text-secondary text-center" style="padding:1rem;">当日无巡检照片</p></div>'}
           </div>
 
