@@ -223,6 +223,7 @@ export const api = {
     },
     stats: (id) => apiFetch(`/farms/${id}/stats`),
     create: (data) => apiFetch('/farms/', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => apiFetch(`/farms/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id) => apiFetch(`/farms/${id}`, { method: 'DELETE' }),
     linkGroup: (data) => apiFetch('/farms/link-group', { method: 'POST', body: JSON.stringify(data) }),
     getLineGroups: async () => {
