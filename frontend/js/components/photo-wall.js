@@ -1,5 +1,5 @@
 import { t } from '../i18n.js';
-import { api } from '../api.js';
+import { api, showToast } from '../api.js';
 
 export async function renderPhotoWall(container) {
   let currentOffset = 0;
@@ -98,7 +98,10 @@ export async function renderPhotoWall(container) {
           </div>
           <div class="flex justify-between items-center" style="margin-top: 0.5rem;">
             <span class="text-sm text-secondary">${uploader}</span>
-            ${getStatusTag(status)}
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              ${getStatusTag(status)}
+              <button class="icon-btn text-danger delete-photo-btn" data-id="${p.id}" title="删除照片" style="padding:0;">🗑️</button>
+            </div>
           </div>
         </div>
       </div>
@@ -106,7 +109,23 @@ export async function renderPhotoWall(container) {
   };
 
   // Attach click listener for Lightbox at the grid level (Event Delegation)
-  grid.addEventListener('click', (e) => {
+  grid.addEventListener('click', async (e) => {
+    if (e.target.closest('.delete-photo-btn')) {
+      e.stopPropagation();
+      const card = e.target.closest('.photo-card');
+      const id = card.dataset.id;
+      if (confirm('确定要删除这张照片吗？此操作无法复原。')) {
+        try {
+          await api.photos.delete(id);
+          card.remove();
+          showToast('照片已删除', 'success');
+        } catch(err) {
+          showToast('删除失败', 'error');
+        }
+      }
+      return;
+    }
+    
     const card = e.target.closest('.photo-card');
     if (!card) return;
     

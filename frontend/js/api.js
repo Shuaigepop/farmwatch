@@ -295,6 +295,14 @@ export const api = {
     get: (id) => {
       if (useMock) return Promise.resolve(mockPhotos.find(p => p.id === id));
       return apiFetch(`/photos/${id}`);
+    },
+    delete: (id) => {
+      if (useMock) {
+        const index = mockPhotos.findIndex(p => p.id === id);
+        if (index > -1) mockPhotos.splice(index, 1);
+        return Promise.resolve({ success: true });
+      }
+      return apiFetch(`/photos/${id}`, { method: 'DELETE' });
     }
   },
 

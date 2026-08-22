@@ -66,6 +66,35 @@ async def get_photo(
         
     return photo
     
+@router.delete("/{photo_id}")
+async def delete_photo(
+    photo_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # 刪除相片 (Delete photo)
+    result = await db.execute(select(Photo).where(Photo.id == photo_id))
+    photo = result.scalar_one_or_none()
+    
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+        
+    if current_user.role == "leader" and photo.farm_id != current_user.farm_id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this photo")
+        
+    # Also delete associated message if it exists
+    if photo.message_id:
+        from models.models import Message
+        msg_result = await db.execute(select(Message).where(Message.id == photo.message_id))
+        msg = msg_result.scalar_one_or_none()
+        if msg:
+            await db.delete(msg)
+            
+    await db.delete(photo)
+    await db.commit()
+    
+    return {"status": "success", "message": "Photo deleted successfully"}
+    
 @router.get("/uploads/{filename}")
 async def serve_upload(filename: str):
     # 讀取上傳檔案 (Serve uploaded file)
