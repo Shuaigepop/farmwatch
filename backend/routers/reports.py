@@ -12,6 +12,7 @@ router = APIRouter(prefix="/api/reports", tags=["reports"])
 @router.get("/daily", response_model=List[DailyReportResponse])
 async def list_reports(
     farm_id: Optional[int] = None,
+    target_date: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -22,7 +23,15 @@ async def list_reports(
     query = select(DailyReport).order_by(DailyReport.created_at.desc())
     if farm_id:
         query = query.where(DailyReport.farm_id == farm_id)
-        
+
+    if target_date:
+        from datetime import datetime
+        try:
+            date_obj = datetime.strptime(target_date, "%Y-%m-%d").date()
+            query = query.where(DailyReport.report_date == date_obj)
+        except ValueError:
+            pass
+            
     result = await db.execute(query)
     reports = result.scalars().all()
     return reports

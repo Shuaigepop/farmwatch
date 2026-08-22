@@ -16,6 +16,7 @@ async def list_tasks(
     farm_id: Optional[int] = None,
     zone_id: Optional[int] = None,
     status: Optional[str] = None,
+    target_date: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -35,6 +36,20 @@ async def list_tasks(
     if zone_id:
         query = query.where(Task.zone_id == zone_id)
         
+    if target_date:
+        from sqlalchemy import cast, Date, or_
+        from datetime import datetime
+        try:
+            date_obj = datetime.strptime(target_date, "%Y-%m-%d").date()
+            query = query.where(
+                or_(
+                    cast(Task.created_at, Date) == date_obj,
+                    cast(Task.completed_at, Date) == date_obj
+                )
+            )
+        except ValueError:
+            pass
+            
     result = await db.execute(query.order_by(Task.due_date.asc()))
     return result.scalars().all()
 

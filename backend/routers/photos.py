@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api/photos", tags=["photos"])
 async def list_photos(
     farm_id: Optional[int] = None,
     health_status: Optional[str] = None,
+    target_date: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -32,6 +33,15 @@ async def list_photos(
         
     if health_status:
         query = query.where(Photo.health_status == health_status)
+
+    if target_date:
+        from sqlalchemy import cast, Date
+        from datetime import datetime
+        try:
+            date_obj = datetime.strptime(target_date, "%Y-%m-%d").date()
+            query = query.where(cast(Photo.captured_at, Date) == date_obj)
+        except ValueError:
+            pass
         
     result = await db.execute(query.order_by(Photo.captured_at.desc()))
     return result.scalars().all()
