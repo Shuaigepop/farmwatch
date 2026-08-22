@@ -2,8 +2,7 @@ from fastapi import APIRouter, BackgroundTasks
 from pydantic import BaseModel
 from services.scheduler import (
     schedule_watering_task,
-    check_missing_work_6pm,
-    generate_evening_summary_7pm,
+    heartbeat_check,
     create_weekly_health_check_tasks
 )
 
@@ -17,15 +16,10 @@ async def test_watering(background_tasks: BackgroundTasks):
     background_tasks.add_task(schedule_watering_task)
     return {"message": "11:00 AM Watering task triggered in background."}
 
-@router.post("/6pm-check")
-async def test_6pm_check(background_tasks: BackgroundTasks):
-    background_tasks.add_task(check_missing_work_6pm)
-    return {"message": "6:00 PM Missing work check triggered in background."}
-
-@router.post("/7pm-summary")
-async def test_7pm_summary(background_tasks: BackgroundTasks):
-    background_tasks.add_task(generate_evening_summary_7pm)
-    return {"message": "7:00 PM Summary and prep triggered in background."}
+@router.post("/heartbeat")
+async def test_heartbeat(background_tasks: BackgroundTasks):
+    background_tasks.add_task(heartbeat_check)
+    return {"message": "Heartbeat check triggered - will run missing work and summary for matching farms."}
 
 @router.post("/monday-health")
 async def test_monday_health(background_tasks: BackgroundTasks):
