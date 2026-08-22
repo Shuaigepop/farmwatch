@@ -176,7 +176,11 @@ export async function renderProgress(container) {
                 <option value="foreman">指派给：工头 (Foreman)</option>
               </select>
             </div>
-            <input type="text" id="new-sop-desc" placeholder="详细说明" class="form-input" style="width:100%; padding: 0.5rem; border-radius: var(--radius-sm); margin-bottom:0.5rem;">
+            <div style="display: flex; gap: 0.5rem; margin-bottom:0.5rem; align-items:center;">
+              <input type="text" id="new-sop-desc" placeholder="详细说明" class="form-input" style="flex:1; padding: 0.5rem; border-radius: var(--radius-sm);">
+              <span class="text-sm font-bold" style="white-space:nowrap;">每日发送时间：</span>
+              <input type="time" id="new-sop-time" class="form-input" value="06:00" style="padding: 0.5rem; border-radius: var(--radius-sm);">
+            </div>
             <button class="btn btn-primary" id="add-sop-btn" style="width: 100%;">新增例行工作 (Add SOP)</button>
           </div>
         </div>
@@ -292,15 +296,29 @@ export async function renderProgress(container) {
             sopContainer.innerHTML = '<div class="text-secondary text-center text-sm" style="padding:1rem;">目前没有设定的例行工作</div>';
             return;
           }
-          sopContainer.innerHTML = sops.map(s => `
+          sopContainer.innerHTML = sops.map(s => {
+            let timeStr = '06:00'; // default
+            if (s.cron_expression) {
+              const parts = s.cron_expression.split(' ');
+              if (parts.length >= 2) {
+                const h = parts[1].padStart(2, '0');
+                const m = parts[0].padStart(2, '0');
+                timeStr = `${h}:${m}`;
+              }
+            }
+            return `
             <div style="padding: 1rem; border-bottom: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
               <div>
-                <div style="font-weight:600;">${s.title} <span class="badge badge-info" style="font-size:0.7rem;">${s.target_role === 'foreman' ? '工头任务' : '员工任务'}</span></div>
-                <div class="text-secondary text-sm">${s.description || ''}</div>
+                <div style="font-weight:600;">${s.title} 
+                   <span class="badge badge-info" style="font-size:0.7rem;">${s.target_role === 'foreman' ? '工头任务' : '员工任务'}</span>
+                   <span class="badge" style="background:var(--bg-color); color:var(--text-secondary); border:1px solid var(--border-color); font-size:0.7rem; margin-left:0.3rem;">🕒 每天 ${timeStr} 自动指派</span>
+                </div>
+                <div class="text-secondary text-sm" style="margin-top:0.3rem;">${s.description || ''}</div>
               </div>
               <button class="icon-btn text-danger delete-sop-btn" data-id="${s.id}">🗑️</button>
             </div>
-          `).join('');
+          `;
+          }).join('');
 
           document.querySelectorAll('.delete-sop-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
@@ -327,7 +345,18 @@ export async function renderProgress(container) {
           const title = document.getElementById('new-sop-title').value;
           const desc = document.getElementById('new-sop-desc').value;
           const role = document.getElementById('new-sop-role').value;
+          const timeVal = document.getElementById('new-sop-time').value; // e.g. "06:00" or "15:30"
+          
           if(!title) return showToast('请输入标题', 'error');
+          
+          let cron_expression = '0 6 * * *'; // fallback
+          if (timeVal) {
+             const parts = timeVal.split(':');
+             if (parts.length === 2) {
+                 cron_expression = `${parseInt(parts[1])} ${parseInt(parts[0])} * * *`;
+             }
+          }
+
           addSopBtn.disabled = true;
           try {
             const token = localStorage.getItem('fw_token');
@@ -336,11 +365,12 @@ export async function renderProgress(container) {
               headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
               body: JSON.stringify({
                 farm_id: farmId, title, description: desc || title, target_role: role,
-                cron_expression: '0 6 * * *', is_active: true
+                cron_expression: cron_expression, is_active: true
               })
             });
             document.getElementById('new-sop-title').value = '';
             document.getElementById('new-sop-desc').value = '';
+            document.getElementById('new-sop-time').value = '06:00';
             loadSOPs();
           } catch(err) { showToast('❌ 新增失败', 'error'); }
           addSopBtn.disabled = false;
