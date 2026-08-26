@@ -1,72 +1,102 @@
 import asyncio
-import os
-import sys
+from sqlalchemy import select, and_
+from database import AsyncSessionLocal
+from models.models import Farm, FarmZone, RecurringTask
 
-# Ensure backend directory is in path for imports
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-from database import init_db, AsyncSessionLocal
-from models.models import Farm, FarmZone, Crop, FertilizerSchedule, RecurringTask
-
-async def seed_ipoh():
-    await init_db()
+async def seed_ipoh_farm():
     async with AsyncSessionLocal() as session:
+        from sqlalchemy import text
+        try:
+            await session.execute(text("ALTER TABLE farms ADD COLUMN IF NOT EXISTS check_time VARCHAR DEFAULT '18:00';"))
+            await session.execute(text("ALTER TABLE farms ADD COLUMN IF NOT EXISTS summary_time VARCHAR DEFAULT '19:00';"))
+            await session.execute(text("ALTER TABLE farms ADD COLUMN IF NOT EXISTS sop_time VARCHAR DEFAULT '06:00';"))
+            await session.execute(text("ALTER TABLE recurring_tasks ADD COLUMN IF NOT EXISTS target_role VARCHAR DEFAULT 'worker';"))
+            await session.commit()
+        except Exception:
+            pass
+
         # 1. Create Farm
-        farm = Farm(name="Ipoh 菜园", location="Ipoh", description="NG LIMAU KASTURI FARM - 12 Acres")
-        session.add(farm)
+        print("Creating Farm...")
+        result = await session.execute(select(Farm).where(Farm.name == "NG Limau Kasturi Farm"))
+        farm = result.scalar_one_or_none()
+        
+        if not farm:
+            farm = Farm(name="NG Limau Kasturi Farm", location="Ipoh", description="Limau Kasturi Plantation")
+            session.add(farm)
+            await session.commit()
+            await session.refresh(farm)
+            print(f"Farm created with ID: {farm.id}")
+        else:
+            print(f"Farm already exists with ID: {farm.id}")
+            
+        # 2. Create Zones (Block A to F)
+        zones = ["Block A", "Block B", "Block C", "Block D", "Block E", "Block F"]
+        zone_ids = {}
+        for z_name in zones:
+            z_result = await session.execute(select(FarmZone).where(FarmZone.farm_id == farm.id, FarmZone.name == z_name))
+            z = z_result.scalar_one_or_none()
+            if not z:
+                z = FarmZone(farm_id=farm.id, name=z_name)
+                session.add(z)
+                await session.commit()
+                await session.refresh(z)
+            zone_ids[z_name] = z.id
+            
+        # Clear existing recurring tasks for this farm to avoid duplicates
+        existing_rt = await session.execute(select(RecurringTask).where(RecurringTask.farm_id == farm.id))
+        for rt in existing_rt.scalars().all():
+            await session.delete(rt)
         await session.commit()
-        await session.refresh(farm)
+            
+        # 3. Create Recurring Tasks
+        print("Creating Recurring Tasks...")
         
-        # 2. Create Zones
-        zones = [
-            FarmZone(farm_id=farm.id, name="Block A", description="252 棵树, 10 行"),
-            FarmZone(farm_id=farm.id, name="Block B", description="300 棵树, 10 行"),
-            FarmZone(farm_id=farm.id, name="Block C", description="254 棵树, 11 行"),
-            FarmZone(farm_id=farm.id, name="Block D", description="252 棵树, 10 行"),
-            FarmZone(farm_id=farm.id, name="Block E", description="306 棵树, 12 行"),
-            FarmZone(farm_id=farm.id, name="Block F", description="324 棵树, 12 行"),
-            FarmZone(farm_id=farm.id, name="Pump House 1", description="靠近 Block A"),
-            FarmZone(farm_id=farm.id, name="Pump House 2", description="靠近 Block D"),
-            FarmZone(farm_id=farm.id, name="Store Room 1", description="靠近 Block A"),
-            FarmZone(farm_id=farm.id, name="Hostel 1", description="主路左边 (靠近 Block C)"),
-            FarmZone(farm_id=farm.id, name="Hostel 2", description="主路右边 (靠近 Block C)")
+        tasks_to_create = [
+            # 土施肥 (Soil Fertilizer)
+            RecurringTask(
+                farm_id=farm.id,
+                title="[土施肥] 鸡粪 550包",
+                description="全园施放鸡粪，共 550 包。管理原则：土施负责长期营养供应。",
+                cron_expression="0 8 1 1,3,5,7,9,11 *", # 1st day of odd months at 08:00
+                target_role="worker"
+            ),
+            RecurringTask(
+                farm_id=farm.id,
+                title="[土施肥] Calcium Nitrate 25kg × 20包",
+                description="全园施放 Calcium Nitrate 25kg × 20包。",
+                cron_expression="0 8 1 2,6,10 *", # 1st day of Feb, Jun, Oct
+                target_role="worker"
+            ),
+            RecurringTask(
+                farm_id=farm.id,
+                title="[土施肥] Calcium Nitrate(20包) + Potassium Nitrate(10包)",
+                description="全园施放 Calcium Nitrate 25kg × 20包 以及 Potassium Nitrate 25kg × 10包。",
+                cron_expression="0 8 1 4,8,12 *", # 1st day of Apr, Aug, Dec
+                target_role="worker"
+            ),
+            
+            # 叶面喷施 (Foliar Spray) - Saturday
+            RecurringTask(
+                farm_id=farm.id,
+                title="[叶面喷施] 周六 Block A→B→C (800L)",
+                description="喷药前先浇水，待叶面基本干燥后开始喷药。\n配方(每20L)：DG 40ml, JS 30ml(雨季或菌害严重40ml)。\n* 第1周加强配方：加入 C-M Monthly Boost 70ml\n* 第2~5周标准配方：加入 C-W Weekly 70ml",
+                cron_expression="30 15 * * 6", # Sat 15:30
+                target_role="worker"
+            ),
+            
+            # 叶面喷施 (Foliar Spray) - Sunday
+            RecurringTask(
+                farm_id=farm.id,
+                title="[叶面喷施] 周日 Block D→E→F (800L)",
+                description="喷药前先浇水，待叶面基本干燥后开始喷药。\n配方(每20L)：DG 40ml, JS 30ml(雨季或菌害严重40ml)。\n* 第1周加强配方：加入 C-M Monthly Boost 70ml\n* 第2~5周标准配方：加入 C-W Weekly 70ml",
+                cron_expression="30 15 * * 0", # Sun 15:30
+                target_role="worker"
+            )
         ]
-        session.add_all(zones)
         
-        # 3. Create Crops
-        crops = [
-            Crop(farm_id=farm.id, name="Kangkong", grow_days=18, harvest_duration_days=1, is_perennial=False),
-            Crop(farm_id=farm.id, name="Bayam hijau", grow_days=24, harvest_duration_days=1, is_perennial=False),
-            Crop(farm_id=farm.id, name="Bayam merah", grow_days=24, harvest_duration_days=1, is_perennial=False),
-            Crop(farm_id=farm.id, name="Bendi", grow_days=45, harvest_duration_days=60, is_perennial=False),
-            Crop(farm_id=farm.id, name="Timun", grow_days=38, harvest_duration_days=30, is_perennial=False),
-            Crop(farm_id=farm.id, name="Kacang panjang", grow_days=55, harvest_duration_days=45, is_perennial=False),
-            Crop(farm_id=farm.id, name="Limau kasturi", grow_days=730, harvest_duration_days=3650, is_perennial=True)
-        ]
-        session.add_all(crops)
-        
-        # 4. Create Fertilizer Schedules
-        fert_scheds = []
-        for month in [1, 3, 5, 7, 9, 11]:
-            fert_scheds.append(FertilizerSchedule(farm_id=farm.id, month=month, fertilizer_name="鸡粪", quantity=550, unit="包", cost_per_unit=3.50))
-        for month in [2, 4, 6, 8, 10, 12]:
-            fert_scheds.append(FertilizerSchedule(farm_id=farm.id, month=month, fertilizer_name="Calcium Nitrate", quantity=20, unit="包", cost_per_unit=70.0))
-        for month in [4, 8, 12]:
-            fert_scheds.append(FertilizerSchedule(farm_id=farm.id, month=month, fertilizer_name="Potassium Nitrate", quantity=10, unit="包", cost_per_unit=200.0))
-        session.add_all(fert_scheds)
-        
-        # 5. Create Recurring Tasks (SOPs)
-        # Saturday is cron day 5 in apscheduler if counting Mon=0.
-        tasks = [
-            RecurringTask(farm_id=farm.id, title="Siram air (Pump 1)", description="Block A 20min, Block B 20min, Block C 20min", cron_expression="0 10 * * *", is_active=True),
-            RecurringTask(farm_id=farm.id, title="Siram air (Pump 2)", description="Block D 20min, Block E 20min, Block F 20min", cron_expression="0 10 * * *", is_active=True),
-            RecurringTask(farm_id=farm.id, title="Spraying Block A, B, C", description="Spray crops in Block A -> B -> C", cron_expression="30 15 * * 5", is_active=True), 
-            RecurringTask(farm_id=farm.id, title="Spraying Block D, E, F", description="Spray crops in Block D -> E -> F", cron_expression="30 15 * * 6", is_active=True)
-        ]
-        session.add_all(tasks)
-        
+        session.add_all(tasks_to_create)
         await session.commit()
-        print(f"Ipoh farm (ID: {farm.id}) seed data successfully created!")
+        print("Data seeded successfully!")
 
 if __name__ == "__main__":
-    asyncio.run(seed_ipoh())
+    asyncio.run(seed_ipoh_farm())

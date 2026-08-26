@@ -86,6 +86,7 @@ async def startup_event():
             session.add_all([farm_a, farm_b, farm_c])
             await session.flush()
             
+
             # 建立預設使用者 (Create default users)
             admin_user = User(
                 username="admin",
@@ -112,6 +113,14 @@ async def startup_event():
             session.add_all([admin_user, supervisor_user, leader_user])
             await session.commit()
             print("Default seed data created: 3 farms + 3 users (admin/admin123, supervisor/super123, leader/leader123)")
+            
+        # Seed NG Limau Kasturi Farm
+        try:
+            from seed_ipoh_farm import seed_ipoh_farm as do_seed
+            await do_seed()
+            print("Successfully seeded NG Limau Kasturi Farm")
+        except Exception as e:
+            print("Failed to seed NG Limau Kasturi Farm:", e)
             
         # 自动填充所有农场的示范规划数据 (Auto seed demo planning data for all farms)
         await auto_seed_all_farms(session)
