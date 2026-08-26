@@ -42,13 +42,26 @@ async def seed_ipoh_farm():
         other_farms = other_farms_res.scalars().all()
         for of in other_farms:
             print(f"Deleting unrelated farm: {of.name}")
-            await session.execute(text(f"DELETE FROM zone_plans WHERE zone_id IN (SELECT id FROM farm_zones WHERE farm_id={of.id})"))
+            # Unlink users from this farm
+            await session.execute(text(f"UPDATE users SET farm_id = NULL WHERE farm_id={of.id}"))
+            
+            # Delete dependent records
+            await session.execute(text(f"DELETE FROM zone_crop_plans WHERE farm_id={of.id}"))
+            await session.execute(text(f"DELETE FROM proposed_schedules WHERE farm_id={of.id}"))
+            await session.execute(text(f"DELETE FROM delivery_records WHERE farm_id={of.id}"))
             await session.execute(text(f"DELETE FROM recurring_tasks WHERE farm_id={of.id}"))
+            await session.execute(text(f"DELETE FROM fertilizer_schedules WHERE farm_id={of.id}"))
+            await session.execute(text(f"DELETE FROM crops WHERE farm_id={of.id}"))
+            await session.execute(text(f"DELETE FROM harvest_plans WHERE farm_id={of.id}"))
+            await session.execute(text(f"DELETE FROM inventory_items WHERE farm_id={of.id}"))
+            await session.execute(text(f"DELETE FROM daily_reports WHERE farm_id={of.id}"))
             await session.execute(text(f"DELETE FROM tasks WHERE farm_id={of.id}"))
             await session.execute(text(f"DELETE FROM photos WHERE farm_id={of.id}"))
             await session.execute(text(f"DELETE FROM messages WHERE farm_id={of.id}"))
-            await session.execute(text(f"DELETE FROM inventory_items WHERE farm_id={of.id}"))
+            await session.execute(text(f"DELETE FROM line_groups WHERE farm_id={of.id}"))
             await session.execute(text(f"DELETE FROM farm_zones WHERE farm_id={of.id}"))
+            
+            # Finally delete the farm
             await session.delete(of)
         
         await session.commit()
@@ -57,7 +70,7 @@ async def seed_ipoh_farm():
         zones = ["Block A", "Block B", "Block C", "Block D", "Block E", "Block F"]
         
         # Delete demo zones for ipoh (A区, B区, etc.)
-        await session.execute(text(f"DELETE FROM zone_plans WHERE zone_id IN (SELECT id FROM farm_zones WHERE farm_id={farm.id} AND name NOT LIKE 'Block%')"))
+        await session.execute(text(f"DELETE FROM zone_crop_plans WHERE farm_id={farm.id} AND zone_id IN (SELECT id FROM farm_zones WHERE farm_id={farm.id} AND name NOT LIKE 'Block%')"))
         await session.execute(text(f"DELETE FROM recurring_tasks WHERE farm_id={farm.id} AND title NOT LIKE '[土施肥]%' AND title NOT LIKE '[叶面喷施]%'"))
         await session.execute(text(f"DELETE FROM farm_zones WHERE farm_id={farm.id} AND name NOT LIKE 'Block%'"))
         await session.commit()
