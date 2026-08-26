@@ -53,8 +53,29 @@ async def seed_ipoh_farm():
         
         await session.commit()
             
-        # 3. Create Zones (Block A to F) for ipoh
+        # 3. Create Zones (Block A to F) for ipoh, and clean up demo ones
         zones = ["Block A", "Block B", "Block C", "Block D", "Block E", "Block F"]
+        
+        # Delete demo zones for ipoh (A区, B区, etc.)
+        await session.execute(text(f"DELETE FROM zone_plans WHERE zone_id IN (SELECT id FROM farm_zones WHERE farm_id={farm.id} AND name NOT LIKE 'Block%')"))
+        await session.execute(text(f"DELETE FROM recurring_tasks WHERE farm_id={farm.id} AND title NOT LIKE '[土施肥]%' AND title NOT LIKE '[叶面喷施]%'"))
+        await session.execute(text(f"DELETE FROM farm_zones WHERE farm_id={farm.id} AND name NOT LIKE 'Block%'"))
+        await session.commit()
+        
+        # Create Crop "青金桔 (Limau Kasturi)"
+        from models.models import Crop, ZoneCropPlan
+        import datetime
+        crop_res = await session.execute(select(Crop).where(Crop.farm_id == farm.id, Crop.name == "青金桔 (Limau Kasturi)"))
+        crop = crop_res.scalar_one_or_none()
+        if not crop:
+            crop = Crop(farm_id=farm.id, name="青金桔 (Limau Kasturi)", grow_days=365, harvest_duration_days=1000, is_perennial=True)
+            session.add(crop)
+            await session.commit()
+            await session.refresh(crop)
+            
+        today = datetime.date.today()
+        
+        zone_db_map = {}
         for z_name in zones:
             z_result = await session.execute(select(FarmZone).where(FarmZone.farm_id == farm.id, FarmZone.name == z_name))
             z = z_result.scalar_one_or_none()
@@ -62,6 +83,25 @@ async def seed_ipoh_farm():
                 z = FarmZone(farm_id=farm.id, name=z_name)
                 session.add(z)
                 await session.commit()
+                await session.refresh(z)
+            zone_db_map[z_name] = z
+            
+            # Create a basic plan if none exists
+            plan_res = await session.execute(select(ZoneCropPlan).where(ZoneCropPlan.zone_id == z.id))
+            if not plan_res.scalar_one_or_none():
+                plan = ZoneCropPlan(
+                    farm_id=farm.id,
+                    zone_id=z.id,
+                    crop_id=crop.id,
+                    crop_name=crop.name,
+                    planted_date=today - datetime.timedelta(days=200),
+                    expected_harvest_date=today + datetime.timedelta(days=165),
+                    harvest_end_date=today + datetime.timedelta(days=1000),
+                    status="growing",
+                    notes="Limau Kasturi Block"
+                )
+                session.add(plan)
+        await session.commit()
             
         # Clear existing recurring tasks for this farm to avoid duplicates
         existing_rt = await session.execute(select(RecurringTask).where(RecurringTask.farm_id == farm.id))
