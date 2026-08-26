@@ -355,7 +355,7 @@ async def handle_rich_menu_intent(text: str, farm_id: int, target_id: str, reply
         return True
 
     # "⚠️ 回报问题" or "Problem" or "Masalah"
-    if "⚠️" in text or text.lower() in ["problem", "masalah", "সমস্যা", "ပြဿနာ"]:
+    if "⚠️" in text or text.lower() in ["problem", "masalah", "সমস্যা", "ပြဿနာ"] or "回报问题" in text or "回报" in text:
         reply = "请拍一张照片给我们看 📷\nPlease send a photo 📷\nTolong kirim foto 📷"
         _bot_states[target_id] = {"action": "report_problem"}
         if reply_token:
@@ -375,7 +375,7 @@ async def handle_rich_menu_intent(text: str, farm_id: int, target_id: str, reply
         return True
 
     # "📦 用了资材" or "Used Supply" or "Pakai Bahan"
-    if "📦" in text or "used" in text.lower() or "pakai" in text.lower():
+    if "📦" in text or "used" in text.lower() or "pakai" in text.lower() or "资材" in text:
         async with AsyncSessionLocal() as session:
             from models.models import InventoryItem
             result = await session.execute(select(InventoryItem).where(InventoryItem.farm_id == farm_id))
@@ -403,7 +403,7 @@ async def handle_rich_menu_intent(text: str, farm_id: int, target_id: str, reply
         return True
 
     # "📋 今日任务" or "Today Tasks"
-    if "📋" in text or "tasks" in text.lower() or "tugas" in text.lower():
+    if "📋" in text or "tasks" in text.lower() or "tugas" in text.lower() or "今日任务" in text or "任务" in text:
         async with AsyncSessionLocal() as session:
             from models.models import Task
             from sqlalchemy.orm import selectinload
