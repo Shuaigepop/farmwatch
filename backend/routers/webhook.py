@@ -426,7 +426,7 @@ async def handle_rich_menu_intent(text: str, farm_id: int, target_id: str, reply
                 zone_name = t.zone.name if t.zone else "Global"
                 reply_lines.append(f"• [{zone_name}] {t.title}")
             
-            if getattr(event, 'reply_token', None) if 'event' in locals() else reply_token:
+            if reply_token:
                 line_service.send_reply(reply_token, "\n".join(reply_lines))
             else:
                 line_service.send_text_message(target_id, "\n".join(reply_lines))

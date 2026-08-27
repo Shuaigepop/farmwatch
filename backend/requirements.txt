@@ -16,3 +16,4 @@ google-genai
 psycopg2-binary
 asyncpg
 cloudinary
+pytz
