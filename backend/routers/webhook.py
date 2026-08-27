@@ -404,40 +404,45 @@ async def handle_rich_menu_intent(text: str, farm_id: int, target_id: str, reply
 
     # "📋 今日任务" or "Today Tasks"
     if "📋" in text or "tasks" in text.lower() or "tugas" in text.lower() or "今日任务" in text or "任务" in text:
-        async with AsyncSessionLocal() as session:
-            from models.models import Task
-            from sqlalchemy.orm import selectinload
-            query = select(Task).options(selectinload(Task.zone)).where(
-                Task.farm_id == farm_id, 
-                Task.status != "completed"
-            ).order_by(Task.due_date.asc())
-            result = await session.execute(query)
-            tasks = result.scalars().all()
-            
-            if not tasks:
-                if reply_token:
-                    line_service.send_reply(reply_token, "✅ 今天无任务 (No tasks today)")
-                else:
-                    line_service.send_text_message(target_id, "✅ 今天无任务 (No tasks today)")
-                return True
+        try:
+            async with AsyncSessionLocal() as session:
+                from models.models import Task
+                from sqlalchemy.orm import selectinload
+                query = select(Task).options(selectinload(Task.zone)).where(
+                    Task.farm_id == farm_id, 
+                    Task.status != "completed"
+                ).order_by(Task.due_date.asc())
+                result = await session.execute(query)
+                tasks = result.scalars().all()
                 
-            reply_lines = ["📋 今日任務 / Today Tasks:\n"]
-            for i, t in enumerate(tasks):
-                zone_name = t.zone.name if t.zone else "Global"
-                reply_lines.append(f"• [{zone_name}] {t.title}")
-            
+                if not tasks:
+                    if reply_token:
+                        line_service.send_reply(reply_token, "✅ 今天无任务 (No tasks today)")
+                    else:
+                        line_service.send_text_message(target_id, "✅ 今天无任务 (No tasks today)")
+                    return True
+                    
+                reply_lines = ["📋 今日任務 / Today Tasks:\n"]
+                for i, t in enumerate(tasks):
+                    zone_name = t.zone.name if t.zone else "Global"
+                    reply_lines.append(f"• [{zone_name}] {t.title}")
+                
+                if reply_token:
+                    line_service.send_reply(reply_token, "\n".join(reply_lines))
+                else:
+                    line_service.send_text_message(target_id, "\n".join(reply_lines))
+        except Exception as e:
+            print(f"Error in Today Tasks webhook: {e}")
             if reply_token:
-                line_service.send_reply(reply_token, "\n".join(reply_lines))
-            else:
-                line_service.send_text_message(target_id, "\n".join(reply_lines))
+                line_service.send_reply(reply_token, "❌ 处理任务时发生错误，请稍后再试。")
         return True
 
-    # Check for Flex Menu triggers ("?", "menu", "选单", "菜单")
-    if text.lower() in ["?", "menu", "menue", "选单", "菜单", "選單", "菜單"]:
+    # Check for Flex Menu triggers ("?", "menu", "选单", "菜单", "@menu")
+    if text.lower() in ["?", "menu", "menue", "选单", "菜单", "選單", "菜單", "@menu"]:
         if reply_token:
             line_service.send_reply_flex_menu(reply_token)
         else:
-            line_service.send_flex_menu(target_id)  # Fallback if I later implement push again
+            line_service.send_flex_menu(target_id)
         return True
 
     return False
