@@ -170,6 +170,11 @@ async def handle_rich_menu_intent(text: str, farm_id: int, target_id: str, reply
     """Handle Rich Menu clicks or stateful replies"""
     text = text.strip()
     
+    if "任务" in text or "tasks" in text.lower():
+        if reply_token:
+            line_service.send_reply(reply_token, f"DEBUG: 收到任务指令, farm_id={farm_id}, target={target_id}")
+            return True
+            
     # 1. Check if user is in a state answering a prompt
     state = _bot_states.get(target_id)
     if state:
@@ -831,9 +836,14 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, db: 
                                 ]
                             }
                             try:
-                                req.post(url, headers=headers, json=payload, timeout=5)
+                                response = req.post(url, headers=headers, json=payload, timeout=5)
+                                if response.status_code != 200:
+                                    print(f"LINE API Error {response.status_code}: {response.text}")
+                                    # Fallback to text only if flex message is rejected
+                                    line_service.send_reply(event.reply_token, reply + f"\n\n[System] Flex Menu Error: {response.text[:100]}")
                             except Exception as e:
                                 print(f"Error sending tasks reply: {e}")
+                                line_service.send_reply(event.reply_token, reply)
                         else:
                             line_service.send_reply(event.reply_token, reply)
                             
