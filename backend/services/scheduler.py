@@ -6,6 +6,7 @@ from sqlalchemy import select, and_
 from datetime import datetime, date, timedelta, timezone
 import json
 import asyncio
+import pytz
 
 from database import AsyncSessionLocal
 from models.models import User, Farm, Message, Task, Photo, DailyReport, LineGroup, InventoryItem, RecurringTask, HarvestPlan, Crop, FarmZone
@@ -13,10 +14,14 @@ from services.ai_service import ai_service
 from services.line_service import line_service
 from config import settings
 
-scheduler = AsyncIOScheduler()
+my_tz = pytz.timezone('Asia/Kuala_Lumpur')
+scheduler = AsyncIOScheduler(timezone=my_tz)
 
 def utc_now():
     return datetime.now(timezone.utc)
+
+def local_now():
+    return datetime.now(my_tz)
 
 async def generate_and_send_daily_reports():
     print(f"[{datetime.now()}] Generating daily reports...")
@@ -354,7 +359,7 @@ async def check_adhoc_notifications(farm, session, now_str):
 
 async def heartbeat_check():
     """Runs every minute to trigger farm-specific tasks based on their custom times."""
-    now_str = datetime.now().strftime("%H:%M")
+    now_str = local_now().strftime("%H:%M")
     try:
         async with AsyncSessionLocal() as session:
             farms_result = await session.execute(select(Farm))
@@ -387,11 +392,14 @@ async def heartbeat_check():
         print(f"Error in heartbeat_check: {e}")
 
 def init_scheduler():
-    scheduler.add_job(generate_and_send_daily_reports, CronTrigger(hour=23, minute=0))
-    scheduler.add_job(generate_harvest_tasks, CronTrigger(hour=0, minute=1), id='daily_harvest', replace_existing=True)
-    scheduler.add_job(schedule_watering_task, CronTrigger(hour=11, minute=0), id='watering', replace_existing=True)
-    scheduler.add_job(heartbeat_check, CronTrigger(minute="*"), id='heartbeat_check', replace_existing=True)
-    scheduler.add_job(create_weekly_health_check_tasks, CronTrigger(day_of_week='mon', hour=8, minute=0), id='monday_health', replace_existing=True)
+    scheduler.add_job(generate_and_send_daily_reports, CronTrigger(hour=23, minute=0, timezone=my_tz))
+    scheduler.add_job(generate_harvest_tasks, CronTrigger(hour=0, minute=1, timezone=my_tz), id='daily_harvest', replace_existing=True)
+    scheduler.add_job(schedule_watering_task, CronTrigger(hour=11, minute=0, timezone=my_tz), id='watering', replace_existing=True)
+    scheduler.add_job(heartbeat_check, CronTrigger(minute="*", timezone=my_tz), id='heartbeat_check', replace_existing=True)
+    scheduler.add_job(create_weekly_health_check_tasks, CronTrigger(day_of_week='mon', hour=8, minute=0, timezone=my_tz), id='monday_health', replace_existing=True)
+    
+    # Initialize the recurring jobs from the database
+    asyncio.get_event_loop().create_task(sync_recurring_jobs())
     
     scheduler.start()
     

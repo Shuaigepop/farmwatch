@@ -425,7 +425,11 @@ async def handle_rich_menu_intent(text: str, farm_id: int, target_id: str, reply
             for i, t in enumerate(tasks):
                 zone_name = t.zone.name if t.zone else "Global"
                 reply_lines.append(f"• [{zone_name}] {t.title}")
-            line_service.send_text_message(target_id, "\n".join(reply_lines))
+            
+            if getattr(event, 'reply_token', None) if 'event' in locals() else reply_token:
+                line_service.send_reply(reply_token, "\n".join(reply_lines))
+            else:
+                line_service.send_text_message(target_id, "\n".join(reply_lines))
         return True
 
     # Check for Flex Menu triggers ("?", "menu", "选单", "菜单")
