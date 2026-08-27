@@ -725,9 +725,14 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, db: 
                     # Start of today (UTC approximate)
                     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
                     
+                    from sqlalchemy import or_
                     query = select(Task).options(selectinload(Task.zone)).where(
                         Task.farm_id == farm_id, 
-                        Task.due_date >= today_start
+                        or_(
+                            Task.due_date >= today_start,
+                            Task.due_date.is_(None)
+                        ),
+                        Task.status != "completed"
                     ).order_by(Task.due_date.asc(), Task.zone_id.asc(), Task.title.asc())
                     result = await db.execute(query)
                     tasks = result.scalars().all()
@@ -774,15 +779,58 @@ async def line_webhook(request: Request, background_tasks: BackgroundTasks, db: 
                         reply_lines.append("\n👇 请选择下方区域来回报进度:")
                         reply = "\n".join(reply_lines).strip()
                         
-                        # Send the text overview
-                        line_service.send_text_message(target_id, reply)
-                        
-                        # Send the zone carousel to reply token
+                        # Send both text overview AND zone carousel in a single reply
                         res = await db.execute(select(FarmZone).where(FarmZone.farm_id == farm_id))
                         zones = res.scalars().all()
+                        
                         if zones:
                             zone_list = [{'id': z.id, 'name': z.name} for z in zones]
-                            line_service.send_carousel_zones(event.reply_token, zone_list)
+                            # Build carousel bubbles
+                            bubbles = []
+                            for zone in zone_list[:10]:
+                                bubbles.append({
+                                    "type": "bubble",
+                                    "size": "micro",
+                                    "header": {
+                                        "type": "box",
+                                        "layout": "vertical",
+                                        "contents": [
+                                            {"type": "text", "text": zone.get('name', 'Zone'), "weight": "bold", "size": "lg", "color": "#1DB446"},
+                                            {"type": "text", "text": "选择区域 (Select)", "size": "xxs", "color": "#aaaaaa"}
+                                        ]
+                                    },
+                                    "body": {
+                                        "type": "box",
+                                        "layout": "vertical",
+                                        "paddingAll": "md",
+                                        "contents": [
+                                            {
+                                                "type": "button",
+                                                "style": "primary",
+                                                "color": "#2D5016",
+                                                "action": {"type": "postback", "label": "选择 (Select)", "data": f"action=zone_selected&zone_id={zone.get('id')}"}
+                                            }
+                                        ]
+                                    }
+                                })
+                            
+                            # Single reply with 2 messages: text + carousel
+                            import requests as req
+                            url = "https://api.line.me/v2/bot/message/reply"
+                            headers = {"Content-Type": "application/json", "Authorization": f"Bearer {settings.LINE_CHANNEL_ACCESS_TOKEN}"}
+                            payload = {
+                                "replyToken": event.reply_token,
+                                "messages": [
+                                    {"type": "text", "text": reply},
+                                    {"type": "flex", "altText": "请选择区域 (Select zone)", "contents": {"type": "carousel", "contents": bubbles}}
+                                ]
+                            }
+                            try:
+                                req.post(url, headers=headers, json=payload, timeout=5)
+                            except Exception as e:
+                                print(f"Error sending tasks reply: {e}")
+                        else:
+                            line_service.send_reply(event.reply_token, reply)
                             
                 elif action == 'done_init':
                     from models.models import FarmZone
