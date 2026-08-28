@@ -361,7 +361,7 @@ async def handle_rich_menu_intent(text: str, farm_id: int, target_id: str, reply
 
     # "⚠️ 回报问题" or "Problem" or "Masalah"
     if "⚠️" in text or text.lower() in ["problem", "masalah", "সমস্যা", "ပြဿနာ"] or "回报问题" in text or "回报" in text:
-        reply = "请拍一张照片给我们看 📷\nPlease send a photo 📷\nTolong kirim foto 📷"
+        reply = "请拍一张照片给我们看 📷\nPlease send a photo 📷\nTolong kirim foto 📷\nကျေးဇူးပြု၍ ဓာတ်ပုံပေးပို့ပါ 📷"
         _bot_states[target_id] = {"action": "report_problem"}
         if reply_token:
             line_service.send_reply(reply_token, reply)

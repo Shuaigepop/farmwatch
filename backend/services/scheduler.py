@@ -148,7 +148,7 @@ async def check_missing_work_by_farms(farms_to_check):
                 uncompleted = task_res.scalars().all()
                 if uncompleted:
                     task_names = ", ".join([t.title for t in uncompleted])
-                    msg = f"⚠️ 以下工作还没完成 / Tasks not finished / Tugas belum selesai:\n{task_names}\n请问是什么原因？(Why? / Mengapa?)"
+                    msg = f"⚠️ 以下工作还没完成 / Tasks not finished / Tugas belum selesai / မပြီးဆုံးသေးသော လုပ်ငန်းများ:\n{task_names}\n请问是什么原因？(Why? / Mengapa? / ဘာကြောင့်လဲ?)"
                     for g in farm_groups:
                         line_service.send_text_message(g, msg)
                 
@@ -158,7 +158,7 @@ async def check_missing_work_by_farms(farms_to_check):
                     del_res = await session.execute(select(DeliveryRecord).where(and_(DeliveryRecord.farm_id == farm.id, DeliveryRecord.created_at >= datetime.combine(today, datetime.min.time()))))
                     deliveries = del_res.scalars().all()
                     if not deliveries:
-                        msg = "⚠️ 今天没有收到出货单！是因为下雨、没熟果还是其他原因？\n⚠️ No delivery record today! Is it raining or no ripe fruits? Please explain.\n⚠️ Tiada rekod penghantaran hari ini! Hujan atau tiada buah masak? Sila jelaskan."
+                        msg = "⚠️ 今天没有收到出货单！是因为下雨、没熟果还是其他原因？\n⚠️ No delivery record today! Is it raining or no ripe fruits? Please explain.\n⚠️ Tiada rekod penghantaran hari ini! Hujan atau tiada buah masak? Sila jelaskan.\n⚠️ ယနေ့ ပို့ဆောင်မှု မှတ်တမ်းမရှိပါ! မိုးရွာနေသလား သို့မဟုတ် အသီးမမှည့်သေးဘူးလား? ကျေးဇူးပြု၍ ရှင်းပြပါ။"
                         for g in farm_groups:
                             line_service.send_text_message(g, msg)
     except Exception as e:
@@ -214,11 +214,11 @@ async def generate_evening_summary_by_farms(farms_to_check):
                 pending.extend(new_tasks)
                 
                 # Tomorrow tasks prep
-                worker_msg = f"📋 【明日工作准备 / Tomorrow's Tasks / Tugas Esok】\n"
+                worker_msg = f"📋 【明日工作准备 / Tomorrow's Tasks / Tugas Esok / မနက်ဖြန်အတွက် လုပ်ငန်းများ】\n"
                 if pending:
                     worker_msg += "\n".join([f"- {p}" for p in pending])
                 else:
-                    worker_msg += "🎉 没有任何待办事项！ (All clear! / Semua selesai!)"
+                    worker_msg += "🎉 没有任何待办事项！ (All clear! / Semua selesai! / အားလုံး ပြီးပါပြီ!)"
                 
                 if farm_groups:
                     for g in farm_groups:
@@ -313,7 +313,7 @@ async def check_adhoc_notifications(farm, session, now_str):
         
         for task in tasks:
             assignee_str = f" @ {task.assignee.display_name}" if task.assignee else " (全体员工/All)"
-            msg = f"🔔 【临时任务提醒 / Task Reminder】\n\n📝 任务: {task.title}\n👤 指派给: {assignee_str}\n\n请尽快处理！(Please handle ASAP!)"
+            msg = f"🔔 【临时任务提醒 / Task Reminder / Peringatan Tugas / လုပ်ငန်းတာဝန် သတိပေးချက်】\n\n📝 任务 / Task / Tugas / လုပ်ငန်းတာဝန်: {task.title}\n👤 指派给 / To / Kepada / သို့: {assignee_str}\n\n请尽快处理！(Please handle ASAP! / Tolong tangani segera! / ကျေးဇူးပြု၍ အမြန်ဆုံး ဆောင်ရွက်ပါ!)"
             for g in farm_groups:
                 line_service.send_text_message(g, msg)
                 
