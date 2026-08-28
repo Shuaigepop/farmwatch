@@ -367,9 +367,6 @@ def init_scheduler():
     scheduler.add_job(heartbeat_check, CronTrigger(minute="*", timezone=my_tz), id='heartbeat_check', replace_existing=True)
     scheduler.add_job(create_weekly_health_check_tasks, CronTrigger(day_of_week='mon', hour=8, minute=0, timezone=my_tz), id='monday_health', replace_existing=True)
     
-    # Initialize the recurring jobs from the database
-    asyncio.get_event_loop().create_task(sync_recurring_jobs())
-    
     scheduler.start()
     
     # Initial trigger for dynamic jobs
