@@ -294,23 +294,9 @@ async def dispatch_sops(farm, session):
             session.add(new_task)
             generated_titles.append(rt.title)
             
-        if not generated_titles:
-            # Tell the user there are no SOPs today
-            msg = f"🌅 【{farm.name} - 每日例行工作报告】\n\n✅ 今天不需要执行任何例行工作！(No SOPs for today!)"
-            if farm_groups:
-                for g in farm_groups:
-                    line_service.send_text_message(g, msg)
-            return
-            
         await session.commit()
         print(f"[{farm.name}] Dispatched {len(generated_titles)} SOP tasks.")
         
-        # Notify LINE group
-        if farm_groups:
-            msg = f"🌅 【{farm.name} - 每日例行工作已派发】\n\n" + "\n".join([f"- {t}" for t in generated_titles])
-            for g in farm_groups:
-                line_service.send_text_message(g, msg)
-                
     except Exception as e:
         print(f"Error in dispatch_sops for {farm.name}: {e}")
 
