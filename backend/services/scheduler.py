@@ -72,55 +72,7 @@ async def generate_and_send_daily_reports():
         print(f"Error in daily report job: {e}")
 
 
-async def create_task_from_template(recurring_task_id: int):
-    """Callback for APScheduler to generate a Task when the cron triggers."""
-    try:
-        async with AsyncSessionLocal() as session:
-            rt = await session.get(RecurringTask, recurring_task_id)
-            if not rt or not rt.is_active:
-                return
-                
-            new_task = Task(
-                farm_id=rt.farm_id,
-                zone_id=rt.zone_id,
-                title=rt.title,
-                description=rt.description,
-                stage="growing", # Or maybe something general
-                status="pending",
-                due_date=utc_now() + timedelta(hours=24)
-            )
-            session.add(new_task)
-            await session.commit()
-            print(f"Generated task from recurring rule: {rt.title}")
-    except Exception as e:
-        print(f"Error creating task from template: {e}")
-
-async def sync_recurring_jobs():
-    """Load recurring tasks from DB and add them to APScheduler."""
-    try:
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(select(RecurringTask).where(RecurringTask.is_active == True))
-            r_tasks = result.scalars().all()
-            
-            # Clear existing dynamically added jobs to refresh
-            for job in scheduler.get_jobs():
-                if job.id.startswith('rt_'):
-                    scheduler.remove_job(job.id)
-                    
-            for rt in r_tasks:
-                parts = rt.cron_expression.split()
-                if len(parts) == 5:
-                    minute, hour, day, month, day_of_week = parts
-                    scheduler.add_job(
-                        create_task_from_template,
-                        CronTrigger(minute=minute, hour=hour, day=day, month=month, day_of_week=day_of_week),
-                        args=[rt.id],
-                        id=f'rt_{rt.id}',
-                        replace_existing=True
-                    )
-        print(f"Loaded {len(r_tasks)} recurring tasks into scheduler.")
-    except Exception as e:
-        print(f"Error syncing recurring jobs: {e}")
+# Removed sync_recurring_jobs and create_task_from_template as we now rely on farm.sop_time in heartbeat_check
 
 async def generate_harvest_tasks():
     """Daily check for crops that need harvesting today."""
@@ -292,6 +244,25 @@ async def create_weekly_health_check_tasks():
     except Exception as e:
         print(f"Error in create_weekly_health_check_tasks: {e}")
 
+def cron_matches_today(cron_expr: str) -> bool:
+    parts = cron_expr.split()
+    if len(parts) != 5:
+        return False
+    _, _, day, month, dow = parts
+    
+    today = datetime.now(my_tz)
+    
+    def match(val, target):
+        if val == '*': return True
+        if ',' in val:
+            return str(target) in val.split(',')
+        return str(target) == val
+        
+    # Python isoweekday() is 1 (Mon) to 7 (Sun)
+    # Standard cron is 0 (Sun) to 6 (Sat)
+    cron_dow = today.isoweekday() % 7
+    return match(day, today.day) and match(month, today.month) and match(dow, cron_dow)
+
 async def dispatch_sops(farm, session):
     try:
         groups_result = await session.execute(select(LineGroup.line_group_id).where(LineGroup.farm_id == farm.id))
@@ -306,6 +277,10 @@ async def dispatch_sops(farm, session):
             
         generated_titles = []
         for rt in r_tasks:
+            # Check if this SOP's schedule matches today
+            if not cron_matches_today(rt.cron_expression):
+                continue
+                
             new_task = Task(
                 farm_id=rt.farm_id,
                 zone_id=rt.zone_id,
@@ -319,11 +294,19 @@ async def dispatch_sops(farm, session):
             session.add(new_task)
             generated_titles.append(rt.title)
             
+        if not generated_titles:
+            # Tell the user there are no SOPs today
+            msg = f"🌅 【{farm.name} - 每日例行工作报告】\n\n✅ 今天不需要执行任何例行工作！(No SOPs for today!)"
+            if farm_groups:
+                for g in farm_groups:
+                    line_service.send_text_message(g, msg)
+            return
+            
         await session.commit()
-        print(f"[{farm.name}] Dispatched {len(r_tasks)} SOP tasks.")
+        print(f"[{farm.name}] Dispatched {len(generated_titles)} SOP tasks.")
         
         # Notify LINE group
-        if farm_groups and generated_titles:
+        if farm_groups:
             msg = f"🌅 【{farm.name} - 每日例行工作已派发】\n\n" + "\n".join([f"- {t}" for t in generated_titles])
             for g in farm_groups:
                 line_service.send_text_message(g, msg)
